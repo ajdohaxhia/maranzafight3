@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0b0d" />
+    <meta
+      name="description"
+      content="MARANZA FIGHT 3 — beat 'em up arcade 3D ambientato in una Milano caricaturale. Combatti i maranza attraverso nove livelli in tre capitoli, dal Naviglio ai tetti del Bosco Verticale, fino al Re dei Tetti."
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MARANZA FIGHT 3" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <title>MARANZA FIGHT 3</title>
+  </head>
+  <body>
+    <div id="app" class="app">
+      <canvas id="game-canvas" aria-label="Scena di gioco 3D"></canvas>
+      <div class="fx-vignette" aria-hidden="true"></div>
+      <div class="fx-scanlines" aria-hidden="true"></div>
+      <div id="damage-layer" class="damage-layer" aria-hidden="true"></div>
+      <div id="screen-flash" class="screen-flash" aria-hidden="true"></div>
+
+      <!-- ══════════════ BOOT ══════════════ -->
+      <section id="screen-boot" class="screen screen--boot is-active" aria-live="polite">
+        <div class="boot">
+          <div class="boot__brand">
+            <span class="boot__tag">MILANO // 03:00</span>
+            <h1 class="boot__logo">MARANZA<br /><span>FIGHT</span><b>3</b></h1>
+          </div>
+          <div class="boot__loading">
+            <div class="boot__row">
+              <span id="boot-status">ACCENDO I LAMPIONI</span>
+              <span id="boot-percent">0%</span>
+            </div>
+            <div class="boot__bar"><i id="boot-bar"></i></div>
+            <p id="boot-hint" class="boot__hint">Caricamento del motore fisico WebAssembly…</p>
+          </div>
+          <p class="boot__legal">Personaggi e situazioni di fantasia. Nessun maranza reale è stato maltrattato.</p>
+        </div>
+      </section>
+
+      <!-- ══════════════ MAIN MENU ══════════════ -->
+      <section id="screen-menu" class="screen screen--menu" aria-label="Menu principale">
+        <div class="menu__grain" aria-hidden="true"></div>
+        <header class="menu__top">
+          <span class="menu__tag">MILANO / ARCADE / 2026</span>
+          <span class="menu__tag menu__tag--right">
+            <span id="menu-build">BUILD 1.0</span> · WASM <i class="status-dot"></i>
+          </span>
+        </header>
+
+        <div class="menu__logo" aria-label="Maranza Fight 3">
+          <span class="logo__kicker">IL BEAT 'EM UP CHE MILANO NON MERITA</span>
+          <h1 class="logo">
+            <span class="logo__word logo__word--main">MARANZA</span>
+            <span class="logo__row">
+              <span class="logo__word logo__word--sub">FIGHT</span>
+              <span class="logo__three">3</span>
+            </span>
+          </h1>
+          <span class="logo__rule"></span>
+        </div>
+
+        <nav class="menu__nav" aria-label="Azioni">
+          <button class="btn btn--primary btn--hero" id="btn-continue" hidden>
+            <span class="btn__index">00</span>
+            <span class="btn__label">CONTINUA</span>
+            <span class="btn__sub" id="continue-label">LIVELLO 1</span>
+          </button>
+          <button class="btn btn--primary btn--hero" id="btn-play">
+            <span class="btn__index">01</span>
+            <span class="btn__label">GIOCA</span>
+            <span class="btn__sub">NUOVA PARTITA</span>
+          </button>
+          <button class="btn" id="btn-levels"><span class="btn__index">02</span><span class="btn__label">LIVELLI</span><span class="btn__sub">Scegli la piazza</span></button>
+          <button class="btn" id="btn-help"><span class="btn__index">03</span><span class="btn__label">COME GIOCARE</span></button>
+          <button class="btn" id="btn-settings"><span class="btn__index">04</span><span class="btn__label">IMPOSTAZIONI</span></button>
+          <button class="btn" id="btn-credits"><span class="btn__index">05</span><span class="btn__label">CREDITI</span></button>
+        </nav>
+
+        <aside class="menu__stats">
+          <div class="stat">
+            <span class="stat__label">RECORD</span>
+            <b class="stat__value" id="menu-best">0000</b>
+          </div>
+          <div class="stat">
+            <span class="stat__label">LIVELLI SBLOCCATI</span>
+            <b class="stat__value" id="menu-progress">1 / 5</b>
+          </div>
+          <div class="menu__hint menu__hint--desktop">
+            <span class="key">WASD</span> muoviti · <span class="key">CLIC</span> picchia · <span class="key">ESC</span> pausa
+          </div>
+          <div class="menu__hint menu__hint--touch">
+            <span class="key">STICK</span> muoviti · <span class="key">PUGNO</span> picchia · trascina per la camera
+          </div>
+        </aside>
+
+        <footer class="menu__footer">
+          <span>Nessun maranza è stato pagato per questa produzione.</span>
+          <button class="link-btn" id="btn-install" hidden>INSTALLA APP</button>
+        </footer>
+      </section>
+
+      <!-- ══════════════ LEVEL SELECT ══════════════ -->
+      <section id="screen-levels" class="screen screen--levels" aria-label="Selezione livelli">
+        <header class="levels__head">
+          <div>
+            <span class="levels__kicker">MILANO NON SI CONSEGNA DA SOLA</span>
+            <h2 class="levels__title">SCEGLI IL <span>LIVELLO</span></h2>
+          </div>
+          <div class="levels__meta">
+            <span id="levels-progress">0 / 9 LIVELLI · 0 / 27 STELLE</span>
+            <span class="levels__hint">Le stelle arrivano da salute e velocità. Nessuna pietà.</span>
+          </div>
+        </header>
+        <div class="level-grid" id="level-grid" role="list"></div>
+        <footer class="levels__foot">
+          <button class="btn btn--ghost" data-back>INDIETRO</button>
+          <span class="levels__foot-note">Parti dal livello scelto con il punteggio azzerato.</span>
+        </footer>
+      </section>
+
+      <!-- ══════════════ PANELS ══════════════ -->
+      <section id="screen-help" class="screen screen--panel" aria-label="Come giocare">
+        <div class="panel">
+          <header class="panel__head">
+            <span class="panel__kicker">MANUALE DI SOPRAVVIVENZA</span>
+            <h2 class="panel__title">COME <span>GIOCARE</span></h2>
+          </header>
+          <div class="panel__body help-grid">
+            <div class="help-card">
+              <h3>TOUCH</h3>
+              <p><b>Joystick</b> a sinistra per muoverti. <b>Trascina</b> lo schermo per girare la telecamera.</p>
+              <p>PUGNO, CALCIO, SCHIVATA e SPECIALE a destra. Tutto contemporaneamente, come si deve.</p>
+            </div>
+            <div class="help-card">
+              <h3>DESKTOP</h3>
+              <p><b>WASD</b> muoviti · <b>Mouse</b> telecamera · <b>Shift</b> corri</p>
+              <p><b>Clic sinistro</b> pugno · <b>Clic destro</b> calcio · <b>Spazio</b> schivata · <b>Q</b> speciale · <b>E</b> raccogli · <b>ESC</b> pausa</p>
+            </div>
+            <div class="help-card help-card--accent">
+              <h3>REGOLA D'ORO</h3>
+              <p>Le combo arrivano concatenando i pugni: il terzo colpo è un calcio che manda tutti a casa.</p>
+              <p>Schiva sul <b>lampo rosso</b>: è una schivata perfetta, carica lo speciale e fa punti.</p>
+            </div>
+            <div class="help-card">
+              <h3>PANINI</h3>
+              <p>I maranza lasciano cadere panini. Avvicinati e premi <b>E</b> (o il tasto RACCOGLI) per recuperare salute.</p>
+              <p>La barra gialla è lo <b>speciale</b>: si carica picchiando e schivando.</p>
+            </div>
+          </div>
+          <footer class="panel__foot">
+            <button class="btn btn--ghost" data-back>INDIETRO</button>
+          </footer>
+        </div>
+      </section>
+
+      <section id="screen-settings" class="screen screen--panel" aria-label="Impostazioni">
+        <div class="panel panel--wide">
+          <header class="panel__head">
+            <span class="panel__kicker">TUNING DA VIA PADOVA</span>
+            <h2 class="panel__title">IMPOSTA<span>ZIONI</span></h2>
+          </header>
+          <div class="panel__body settings-grid">
+            <div class="settings-group">
+              <h3>GRAFICA</h3>
+              <div class="segmented" role="group" aria-label="Qualità grafica">
+                <button data-quality="low">BASSA</button>
+                <button data-quality="medium">MEDIA</button>
+                <button data-quality="high">ALTA</button>
+              </div>
+              <p class="settings-note" id="quality-note">La qualità cambia ombre, risoluzione interna e densità degli effetti.</p>
+            </div>
+            <div class="settings-group">
+              <h3>AUDIO</h3>
+              <label class="slider">
+                <span>Generale <b id="val-master">80</b></span>
+                <input id="set-master" type="range" min="0" max="100" value="80" />
+              </label>
+              <label class="slider">
+                <span>Musica <b id="val-music">60</b></span>
+                <input id="set-music" type="range" min="0" max="100" value="60" />
+              </label>
+              <label class="slider">
+                <span>Effetti <b id="val-sfx">85</b></span>
+                <input id="set-sfx" type="range" min="0" max="100" value="85" />
+              </label>
+              <label class="toggle">
+                <input id="set-mute" type="checkbox" />
+                <span class="toggle__track"><i></i></span>
+                <span>MUTO</span>
+              </label>
+            </div>
+            <div class="settings-group">
+              <h3>CONTROLLI</h3>
+              <label class="slider">
+                <span>Sensibilità camera <b id="val-sens">100</b></span>
+                <input id="set-sens" type="range" min="30" max="220" value="100" />
+              </label>
+              <label class="slider">
+                <span>Zona morta joystick <b id="val-dead">18</b></span>
+                <input id="set-dead" type="range" min="0" max="45" value="18" />
+              </label>
+              <label class="toggle">
+                <input id="set-shake" type="checkbox" checked />
+                <span class="toggle__track"><i></i></span>
+                <span>SCOSSONI CAMERA</span>
+              </label>
+              <label class="toggle">
+                <input id="set-invert" type="checkbox" />
+                <span class="toggle__track"><i></i></span>
+                <span>INVERTI ASSE Y</span>
+              </label>
+            </div>
+            <div class="settings-group">
+              <h3>DATI</h3>
+              <p class="settings-note">Salvataggi e record restano solo su questo dispositivo.</p>
+              <button class="btn btn--danger" id="btn-wipe">CANCELLA TUTTI I SALVATAGGI</button>
+              <p class="settings-note" id="save-status">Salvataggio locale attivo.</p>
+            </div>
+          </div>
+          <footer class="panel__foot">
+            <button class="btn btn--ghost" data-back>INDIETRO</button>
+          </footer>
+        </div>
+      </section>
+
+      <section id="screen-credits" class="screen screen--panel" aria-label="Crediti">
+        <div class="panel">
+          <header class="panel__head">
+            <span class="panel__kicker">GENTE CHE HA PERSO SONNO</span>
+            <h2 class="panel__title">CRE<span>DITI</span></h2>
+          </header>
+          <div class="panel__body credits">
+            <p class="credits__big">MARANZA FIGHT 3</p>
+            <p>Un'opera di fantasia ambientata in una Milano che non esiste.</p>
+            <ul class="credits__list">
+              <li><span>GAME DESIGN &amp; CODE</span><b>Studio Randello</b></li>
+              <li><span>3D &amp; ANIMAZIONI</span><b>Procedural Low-Poly Dept.</b></li>
+              <li><span>MUSICA &amp; SFX</span><b>Sintetizzatore del Quartiere</b></li>
+              <li><span>ENGINE</span><b>Three.js + Rapier WASM</b></li>
+              <li><span>TEST</span><b>Chromium, WebKit, dita vere</b></li>
+            </ul>
+            <p class="credits__small">
+              Nessun asset di terzi, nessuna API, nessun backend. Tutti i personaggi sono fittizi e nessuna
+              categoria di persone è presa di mira: qui si menano solo maranza immaginari con il borsello.
+            </p>
+          </div>
+          <footer class="panel__foot">
+            <button class="btn btn--ghost" data-back>INDIETRO</button>
+          </footer>
+        </div>
+      </section>
+
+      <!-- ══════════════ HUD ══════════════ -->
+      <section id="hud" class="hud" aria-label="Interfaccia di gioco">
+        <div class="hud__top">
+          <div class="fighter-plate">
+            <div class="fighter-plate__head">
+              <span class="fighter-plate__name">ROBY</span>
+              <span class="fighter-plate__tag">IL BECCARO</span>
+            </div>
+            <div class="bar bar--hp">
+              <span class="bar__ghost" id="hud-hp-ghost"></span>
+              <span class="bar__fill" id="hud-hp-fill"></span>
+              <span class="bar__ticks"></span>
+            </div>
+            <div class="bar bar--energy">
+              <span class="bar__fill" id="hud-energy-fill"></span>
+            </div>
+            <div class="fighter-plate__meta">
+              <span>HP <b id="hud-hp-text">120</b></span>
+              <span id="hud-special-state">SPECIALE NON PRONTO</span>
+            </div>
+          </div>
+
+          <div class="level-plate">
+            <div class="level-plate__level" id="hud-level">STAZIONE CENTRALE</div>
+            <div class="level-plate__row">
+              <span class="level-plate__wave">ONDATA <b id="hud-wave">1 / 3</b></span>
+              <span class="level-plate__dot"></span>
+              <span class="level-plate__enemies"><b id="hud-enemies">0</b> RIMASTI</span>
+            </div>
+            <div class="level-plate__progress"><i id="hud-wave-fill"></i></div>
+          </div>
+
+          <div class="score-plate">
+            <span class="score-plate__label">PUNTEGGIO</span>
+            <b class="score-plate__value" id="hud-score">000000</b>
+            <span class="score-plate__best">RECORD <b id="hud-best">0000</b></span>
+          </div>
+        </div>
+
+        <button id="btn-hud-pause" class="hud-pause" aria-label="Pausa">
+          <span></span><span></span>
+        </button>
+
+        <div class="combo" id="hud-combo" aria-live="polite">
+          <b id="hud-combo-count">x1</b>
+          <span>COMBO</span>
+          <i id="hud-combo-mult">x1.0</i>
+        </div>
+
+        <div class="boss-hud" id="boss-hud" aria-label="Salute del boss">
+          <div class="boss-hud__head">
+            <span id="boss-name">IL RE DEL BORSELLO</span>
+            <b id="boss-hp-text">100%</b>
+          </div>
+          <div class="bar bar--boss">
+            <span class="bar__fill" id="boss-hp-fill"></span>
+            <span class="bar__ticks"></span>
+          </div>
+          <div class="boss-hud__phase" id="boss-phase">FASE I — TRUCCIDERO</div>
+        </div>
+
+        <div class="hud__bottom">
+          <div class="dodge-meter" id="dodge-meter">
+            <span class="dodge-meter__label">SCHIVATA</span>
+            <span class="dodge-meter__bar"><i id="dodge-fill"></i></span>
+          </div>
+          <div class="hud__hint" id="hud-hint">SCHIVA SUL LAMPO ROSSO</div>
+        </div>
+
+        <div class="pickup-prompt" id="pickup-prompt" hidden>
+          <span class="key">E</span>
+          <span>RACCOGLI IL PANINO</span>
+        </div>
+      </section>
+
+      <!-- ══════════════ PAUSE / RESULTS ══════════════ -->
+      <section id="screen-pause" class="screen screen--modal" aria-label="Pausa">
+        <div class="modal">
+          <span class="modal__kicker">RESPIRO</span>
+          <h2 class="modal__title">PAUSA</h2>
+          <div class="modal__actions">
+            <button class="btn btn--primary" id="btn-resume"><span class="btn__label">RIPRENDI</span></button>
+            <button class="btn" id="btn-pause-settings"><span class="btn__label">IMPOSTAZIONI</span></button>
+            <button class="btn" id="btn-restart-level"><span class="btn__label">RIAVVIA LIVELLO</span></button>
+            <button class="btn btn--ghost" id="btn-quit"><span class="btn__label">TORNA AL MENU</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-level-complete" class="screen screen--results" aria-label="Livello completato">
+        <div class="results">
+          <span class="results__kicker" id="lc-kicker">LIVELLO 1 COMPLETATO</span>
+          <h2 class="results__title" id="lc-title">STAZIONE<br /><span>CENTRALE</span></h2>
+          <div class="results__stars" id="lc-stars" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="results__grid">
+            <div><span>PUNTEGGIO</span><b id="lc-score">0</b></div>
+            <div><span>MIGLIOR COMBO</span><b id="lc-combo">0</b></div>
+            <div><span>MARANZA MESSI A POSTO</span><b id="lc-kos">0</b></div>
+            <div><span>TEMPO</span><b id="lc-time">0:00</b></div>
+          </div>
+          <p class="results__note" id="lc-note">Milano è un po' più tranquilla. Per ora.</p>
+          <div class="results__actions">
+            <button class="btn btn--primary" id="btn-next-level"><span class="btn__label">AVANTI</span></button>
+            <button class="btn btn--ghost" id="btn-lc-menu"><span class="btn__label">MENU</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-gameover" class="screen screen--results" aria-label="Game over">
+        <div class="results results--red">
+          <span class="results__kicker">IL BORSELLO HA VINTO</span>
+          <h2 class="results__title">GAME<br /><span>OVER</span></h2>
+          <p class="results__big" id="go-quote">"Te l'avevo detto, fra'."</p>
+          <div class="results__grid results__grid--two">
+            <div><span>PUNTEGGIO</span><b id="go-score">0</b></div>
+            <div><span>ONDATA</span><b id="go-wave">1</b></div>
+          </div>
+          <div class="results__actions">
+            <button class="btn btn--primary" id="btn-retry"><span class="btn__label">RIPROVA</span></button>
+            <button class="btn btn--ghost" id="btn-go-menu"><span class="btn__label">MENU</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-victory" class="screen screen--results" aria-label="Vittoria">
+        <div class="results results--gold">
+          <span class="results__kicker">MILANO È SALVA (PIÙ O MENO)</span>
+          <h2 class="results__title">RE<br /><span>SPODESTATO</span></h2>
+          <p class="results__big">Il Re dei Tetti è finito in monopattino. Nove piazze, una sola notte.</p>
+          <div class="results__grid">
+            <div><span>PUNTEGGIO FINALE</span><b id="vi-score">0</b></div>
+            <div><span>MIGLIOR COMBO</span><b id="vi-combo">0</b></div>
+            <div><span>MARANZA TOTALI</span><b id="vi-kos">0</b></div>
+            <div><span>TEMPO</span><b id="vi-time">0:00</b></div>
+          </div>
+          <div class="results__actions">
+            <button class="btn btn--primary" id="btn-victory-menu"><span class="btn__label">TORNA AL MENU</span></button>
+            <button class="btn" id="btn-newgame-plus"><span class="btn__label">NUOVA PARTITA</span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════ SYSTEM OVERLAYS ══════════════ -->
+      <div id="screen-rotate" class="rotate" role="status">
+        <div class="rotate__phone" aria-hidden="true"><span></span></div>
+        <h2>GIRA IL TELEFONO</h2>
+        <p>MARANZA FIGHT 3 si gioca in orizzontale.<br />Ruota il dispositivo per entrare in piazza.</p>
+        <span class="rotate__tag">MILANO TI ASPETTA</span>
+        <button class="btn btn--ghost" id="btn-rotate-anyway">APRI COMUNQUE</button>
+      </div>
+
+      <div id="screen-error" class="error-screen" role="alert" hidden>
+        <h2>QUALCOSA NON TORNA</h2>
+        <p id="error-message">Il gioco non riesce ad avviarsi.</p>
+        <div class="error-screen__actions">
+          <button class="btn btn--primary" id="btn-error-retry"><span class="btn__label">RIPROVA</span></button>
+          <button class="btn btn--ghost" id="btn-error-menu"><span class="btn__label">MENU</span></button>
+        </div>
+        <pre id="error-detail" class="error-screen__detail" hidden></pre>
+      </div>
+
+      <div id="boss-intro" class="boss-intro" aria-live="polite">
+        <div class="boss-intro__bars" aria-hidden="true"><i></i><i></i><i></i></div>
+        <span class="boss-intro__kicker">BOSS FINALE</span>
+        <h2 class="boss-intro__name">IL RE<br /><span>DEL BORSELLO</span></h2>
+        <p class="boss-intro__quote">"Questa piazza è casa mia, fra'."</p>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite">
+        <span id="toast-kicker">ONDATA</span>
+        <b id="toast-text">2 / 3</b>
+      </div>
+
+      <div id="touch-controls" class="touch" aria-hidden="true">
+        <div class="stick" id="stick">
+          <div class="stick__base"></div>
+          <div class="stick__cross"></div>
+          <div class="stick__knob" id="stick-knob"></div>
+        </div>
+        <div class="touch-actions">
+          <button class="tbtn tbtn--punch" data-action="punch" aria-label="Pugno">
+            <span class="tbtn__glyph">P</span><span class="tbtn__label">PUGNO</span>
+          </button>
+          <button class="tbtn tbtn--kick" data-action="kick" aria-label="Calcio">
+            <span class="tbtn__glyph">C</span><span class="tbtn__label">CALCIO</span>
+          </button>
+          <button class="tbtn tbtn--dodge" data-action="dodge" aria-label="Schivata">
+            <span class="tbtn__glyph">↯</span><span class="tbtn__label">SCHIVA</span>
+          </button>
+          <button class="tbtn tbtn--special" data-action="special" aria-label="Speciale">
+            <span class="tbtn__glyph">S</span><span class="tbtn__label">SPECIALE</span>
+          </button>
+        </div>
+        <button class="tbtn tbtn--interact" id="touch-interact" data-action="interact" aria-label="Raccogli">
+          <span class="tbtn__label">RACCOGLI</span>
+        </button>
+      </div>
+
+      <noscript>
+        <div class="noscript">MARANZA FIGHT 3 richiede JavaScript e WebGL 2 per menare le mani.</div>
+      </noscript>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

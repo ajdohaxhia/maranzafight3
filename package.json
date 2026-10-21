@@ -1,0 +1,36 @@
+{
+  "name": "maranza-fight-3",
+  "private": true,
+  "version": "1.2.0",
+  "description": "MARANZA FIGHT 3 - arcade beat 'em up 3D per il web, mobile-first, Three.js + Rapier WASM",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "icons": "node scripts/gen-icons.mjs"
+  },
+  "keywords": [
+    "game",
+    "threejs",
+    "webassembly",
+    "rapier",
+    "pwa",
+    "beat-em-up"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/three": "^0.180.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5",
+    "vitest": "^3.2.4"
+  }
+}

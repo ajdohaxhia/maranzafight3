@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="MARANZA FIGHT 3">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16161c"/>
+      <stop offset="0.55" stop-color="#0b0b0e"/>
+      <stop offset="1" stop-color="#050507"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe45c"/>
+      <stop offset="0.55" stop-color="#ffd400"/>
+      <stop offset="1" stop-color="#f0a500"/>
+    </linearGradient>
+    <pattern id="stripes" width="34" height="34" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+      <rect width="34" height="34" fill="none"/>
+      <rect width="10" height="34" fill="#ffffff" opacity="0.035"/>
+    </pattern>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="96" fill="url(#stripes)"/>
+  <path d="M-20 420 L532 150 L532 118 L-20 388 Z" fill="#ff2f2f" opacity="0.16"/>
+  <rect x="28" y="28" width="456" height="456" rx="76" fill="none" stroke="#f3efe3" stroke-opacity="0.16" stroke-width="4"/>
+  <g font-family="Helvetica Neue, Arial Black, Arial, sans-serif" font-weight="900" text-anchor="middle">
+    <text x="232" y="296" font-size="196" letter-spacing="-16" fill="#0a0a0c" opacity="0.9" transform="translate(10 12)">MF</text>
+    <text x="232" y="296" font-size="196" letter-spacing="-16" fill="url(#yellow)">MF</text>
+    <text x="384" y="392" font-size="164" letter-spacing="-8" fill="#0a0a0c" transform="translate(8 10)">3</text>
+    <text x="384" y="392" font-size="164" letter-spacing="-8" fill="#ff2f2f">3</text>
+    <text x="256" y="444" font-size="28" letter-spacing="11" fill="#f3efe3" opacity="0.78">MARANZA FIGHT</text>
+  </g>
+  <g fill="#ffd400">
+    <rect x="42" y="42" width="54" height="7"/>
+    <rect x="42" y="42" width="7" height="54"/>
+    <rect x="416" y="42" width="54" height="7"/>
+    <rect x="463" y="42" width="7" height="54"/>
+    <rect x="42" y="463" width="54" height="7"/>
+    <rect x="42" y="416" width="7" height="54"/>
+    <rect x="416" y="463" width="54" height="7"/>
+    <rect x="463" y="416" width="7" height="54"/>
+  </g>
+</svg>
