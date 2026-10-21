@@ -117,17 +117,6 @@ async function main(): Promise<void> {
       startMode: (mode: 'survival' | 'bossRush' | 'training' | 'challenge' | 'remix', challengeId?: string) =>
         game.debugStartMode(mode, challengeId),
       modeInfo: () => game.debugModeInfo(),
-      startZombies: (mode: 'infinite' | 'extraction' = 'infinite') => game.debugStartZombies(mode),
-      zombiesStartRound: (round: number) => game.debugStartZombiesRound(round),
-      zombiesClear: () => game.debugZombiesClear(),
-      zombiesCompleteRound: () => game.debugZombiesCompleteRound(),
-      zombiesPoints: (amount: number) => game.debugZombiesPoints(amount),
-      zombiesOpenDoors: () => game.debugZombiesOpenDoors(),
-      zombiesHurt: (amount: number) => game.debugZombiesHurt(amount),
-      zombiesTeleport: (x: number, z: number) => game.debugZombiesTeleport(x, z),
-      zombiesAim: (x: number, z: number) => game.debugZombiesAim(x, z),
-      zombiesBreakWindow: () => game.debugZombiesBreakWindow(),
-      zombiesSpawn: (kind: string) => game.debugZombiesSpawn(kind),
       setVisible: (name: string, visible: boolean) => game.debugSetVisible(name, visible),
       sceneInfo: () => game.debugSceneInfo(),
     };

@@ -24,13 +24,6 @@ interface Snapshot {
   drawCalls: number;
   screen: string | null;
   levelCount: number;
-  mode?: string;
-  phase?: string;
-  round?: number;
-  points?: number;
-  kills?: number;
-  mag?: number;
-  zombiesAt?: Array<[number, number, string, string]>;
 }
 
 declare global {
@@ -59,10 +52,6 @@ declare global {
         levelIndex: number;
         training: boolean;
       };
-      startZombies(mode?: 'infinite' | 'extraction'): void;
-      zombiesSpawn(kind?: string): void;
-      zombiesAim(x: number, z: number): void;
-      zombiesCompleteRound(): void;
     };
   }
 }
@@ -207,55 +196,15 @@ test.describe('MARANZA FIGHT 3', () => {
   test('il boss compare e incassa i colpi', async ({ page }) => {
     await boot(page);
     await startGame(page);
-    expect((await snapshot(page)).levelCount).toBe(9);
-    await page.evaluate(() => window.__MARANZA__.jumpToLevel(4));
-    await page.waitForFunction(() => window.__MARANZA__.snapshot.level === 4);
+    expect((await snapshot(page)).levelCount).toBe(12);
+    await page.evaluate(() => window.__MARANZA__.jumpToLevel(5));
+    await page.waitForFunction(() => window.__MARANZA__.snapshot.level === 5);
     await page.evaluate(() => window.__MARANZA__.spawnEnemy('boss'));
     await page.waitForFunction(() => window.__MARANZA__.snapshot.bossActive, undefined, { timeout: 20_000 });
     const intro = await snapshot(page);
     expect(intro.levelName).toBe('DUOMO SHOWDOWN');
     expect(intro.bossHp).toBeGreaterThan(100);
     await expect(page.locator('#boss-hud')).toHaveClass(/is-active/);
-  });
-
-  test('modalità zombies: HUD, sparo, uccisione e fine round', async ({ page, isMobile }) => {
-    test.skip(isMobile, 'Mira e fuoco col mouse, la variante touch è coperta dal test mobile');
-    await boot(page);
-    await page.locator('#btn-zombies').click();
-    await expect(page.locator('#screen-zombies')).toHaveClass(/is-active/);
-    // The mode buttons must keep their label/sub markup (the sub is not glued
-    // onto the label, which is what a textContent rewrite used to cause).
-    await expect(page.locator('[data-zmode="extraction"] .btn__label')).toHaveText('ESTRAZIONE');
-    await expect(page.locator('[data-zmode="extraction"] .btn__sub')).toHaveText('20 round · obiettivo finale');
-    await page.locator('[data-zmode="infinite"]').click();
-    await expect.poll(async () => (await snapshot(page)).mode, { timeout: 30_000 }).toBe('zombies');
-    await expect(page.locator('#zombies-hud')).toHaveClass(/is-active/);
-    await page.waitForFunction(() => window.__MARANZA__.snapshot.phase === 'round', undefined, { timeout: 30_000 });
-
-    await page.evaluate(() => window.__MARANZA__.zombiesSpawn('walker'));
-    await page.waitForTimeout(300);
-    const target = await page.evaluate(() => {
-      const snap = window.__MARANZA__.snapshot;
-      const zombie = snap.zombiesAt?.[snap.zombiesAt.length - 1];
-      if (!zombie) return null;
-      window.__MARANZA__.zombiesAim(zombie[0], zombie[1]);
-      return zombie;
-    });
-    expect(target).not.toBeNull();
-    await page.waitForTimeout(200);
-    await page.evaluate(() => {
-      const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-      canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
-      window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
-    });
-    await expect
-      .poll(async () => (await snapshot(page)).points ?? 0, { timeout: 10_000, intervals: [150] })
-      .toBeGreaterThan(0);
-
-    await page.evaluate(() => window.__MARANZA__.zombiesCompleteRound());
-    await expect.poll(async () => (await snapshot(page)).phase, { timeout: 10_000 }).toBe('intermission');
-    await expect(page.locator('#z-intermission')).toHaveClass(/is-active/);
-    expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
   });
 
   test('modalità: sopravvivenza parte in Duomo con venti round', async ({ page }) => {
@@ -269,6 +218,7 @@ test.describe('MARANZA FIGHT 3', () => {
     await page.waitForFunction(() => window.__MARANZA__.snapshot.state === 'playing');
     const snap = await snapshot(page);
     expect(snap.hudVisible).toBe(true);
+    expect(snap.levelName).toBe('DUOMO SHOWDOWN');
     expect(await page.locator('#hud-level').textContent()).toBe('SOPRAVVIVENZA');
     await expect(page.locator('#hud-wave')).toContainText('/ 20');
     const info = await page.evaluate(() => window.__MARANZA__.modeInfo());
@@ -354,14 +304,32 @@ test.describe('MARANZA FIGHT 3', () => {
     await expect(page.locator('#mr-kicker')).toHaveText('RUN TERMINATA');
   });
 
-  test('la selezione livelli mostra nove piazze in tre capitoli', async ({ page }) => {
+  test('i tre nuovi quartieri si caricano con le ondate', async ({ page }) => {
+    await boot(page);
+    await startGame(page);
+    for (const [level, name] of [
+      [4, 'BRERA'],
+      [8, 'CITYLIFE'],
+      [10, 'CITTÀ STUDI'],
+    ] as Array<[number, string]>) {
+      await page.evaluate((index) => window.__MARANZA__.jumpToLevel(index), level);
+      await page.waitForFunction((index) => window.__MARANZA__.snapshot.level === index, level);
+      expect((await snapshot(page)).levelName).toBe(name);
+      await expect
+        .poll(async () => (await snapshot(page)).wave, { timeout: 15_000 })
+        .toBeGreaterThan(0);
+    }
+    expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
+  });
+
+  test('la selezione livelli mostra dodici piazze in tre capitoli', async ({ page }) => {
     await boot(page);
     await page.locator('#btn-levels').click();
     await expect(page.locator('#screen-levels')).toHaveClass(/is-active/);
-    await expect(page.locator('.level-card')).toHaveCount(9);
-    await expect(page.locator('.level-card.is-locked')).toHaveCount(8);
+    await expect(page.locator('.level-card')).toHaveCount(12);
+    await expect(page.locator('.level-card.is-locked')).toHaveCount(11);
     await expect(page.locator('.level-card__boss.is-chapter').first()).toContainText('CAP I');
-    await expect(page.locator('#levels-progress')).toContainText('/ 9 LIVELLI');
+    await expect(page.locator('#levels-progress')).toContainText('/ 12 LIVELLI');
     const art = page.locator('.level-card').first().locator('img');
     await expect(art).toHaveAttribute('src', /previews\/level-1\.jpg/);
     // A locked card must not start anything.
@@ -484,46 +452,4 @@ test.describe('mobile touch', () => {
     expect(await page.locator('#hud-level').textContent()).toBe('SOPRAVVIVENZA');
   });
 
-  test('zombies: HUD libero dallo stick e fuoco touch', async ({ page }) => {
-    await boot(page);
-    await page.locator('#btn-zombies').tap();
-    await expect(page.locator('#screen-zombies')).toHaveClass(/is-active/);
-    await page.locator('[data-zmode="infinite"]').tap();
-    await expect.poll(async () => (await snapshot(page)).mode, { timeout: 30_000 }).toBe('zombies');
-    await page.waitForFunction(() => window.__MARANZA__.snapshot.phase === 'round', undefined, { timeout: 30_000 });
-
-    const layout = await page.evaluate(() => {
-      const rect = (selector: string) => {
-        const element = document.querySelector(selector);
-        if (!element) return null;
-        const box = element.getBoundingClientRect();
-        return { x: box.x, y: box.y, w: box.width, h: box.height };
-      };
-      const overlap = (a: ReturnType<typeof rect>, b: ReturnType<typeof rect>) => {
-        if (!a || !b) return true;
-        return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-      };
-      const weapon = rect('.zhud__weapon');
-      const stick = rect('.stick');
-      const fire = rect('.tbtn--fire');
-      return {
-        weapon,
-        stick,
-        weaponHitsStick: overlap(weapon, stick),
-        weaponHitsFire: overlap(weapon, fire),
-        bodyTouch: document.body.classList.contains('is-touch'),
-      };
-    });
-    expect(layout.bodyTouch).toBe(true);
-    expect(layout.weapon).not.toBeNull();
-    expect(layout.weaponHitsStick).toBe(false);
-    expect(layout.weaponHitsFire).toBe(false);
-
-    const before = (await snapshot(page)).mag ?? 0;
-    await page.locator('.tbtn--fire').tap();
-    await expect
-      .poll(async () => (await snapshot(page)).mag ?? before, { timeout: 10_000, intervals: [150] })
-      .toBeLessThan(before);
-    expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
-  });
 });

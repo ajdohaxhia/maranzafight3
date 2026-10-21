@@ -33,11 +33,7 @@ export class Player extends Fighter {
   specialCooldown = 0;
   controlLocked = false;
   victory = false;
-  /** Movement multiplier used by Zombies perks (default 1). */
-  speedMultiplier = 1;
-  /** Dodge cooldown multiplier used by Zombies perks (default 1). */
-  dodgeCooldownMultiplier = 1;
-  /** Attack damage multiplier used by mode modifiers and Zombies perks (default 1). */
+  /** Attack damage multiplier used by mode modifiers (default 1). */
   damageMultiplier = 1;
   chainIndex = 0;
   chainTimer = 0;
@@ -158,7 +154,7 @@ export class Player extends Fighter {
     }
     if (this.dodgeTimer > 0) return false;
     this.dodgeTimer = DODGE_DURATION;
-    this.dodgeCooldown = DODGE_COOLDOWN * this.dodgeCooldownMultiplier;
+    this.dodgeCooldown = DODGE_COOLDOWN;
     this.invulnTimer = Math.max(this.invulnTimer, 0.3);
     this.attack = null;
     this.queued = null;
@@ -330,7 +326,7 @@ export class Player extends Fighter {
       this.lastAttackSerial = this.attack.serial;
       this.movingSpeed = 0;
     } else {
-      const speed = (run ? RUN_SPEED : WALK_SPEED) * this.speedMultiplier;
+      const speed = run ? RUN_SPEED : WALK_SPEED;
       if (moving) {
         this.moveHorizontal(dt, moveX * speed, moveZ * speed);
         this.targetYaw = Math.atan2(moveX, moveZ);

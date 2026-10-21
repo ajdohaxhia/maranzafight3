@@ -7,10 +7,13 @@ export const LEVEL_IDS = [
   'stazione',
   'metro',
   'navigli',
+  'brera',
   'duomo',
   'porta-venezia',
   'sempione',
+  'citylife',
   'isola',
+  'citta-studi',
   'darsena',
   'tetti',
 ] as const;

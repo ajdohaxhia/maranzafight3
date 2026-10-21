@@ -1,11 +1,9 @@
 # MARANZA FIGHT 3
 
-Beat 'em up arcade 3D, mobile-first, giocabile da browser. Milano caricaturale, **nove livelli in tre
+Beat 'em up arcade 3D, mobile-first, giocabile da browser. Milano caricaturale, **dodici livelli in tre
 capitoli**, quattro archetipi di "maranza" e **sei boss** — Buttafuori, Personal Trainer, DJ,
 Consiglio del Borsello, Re del Borsello e Re dei Tetti. In più quattro modalità fuori campagna
-(**Sopravvivenza**, **Boss Rush**, **Allenamento**, **Remix**), tre sfide a seed fisso e la modalità
-survival separata **Notte morta a Milano**: cinque settori, barricate, armi da comprare, perk e
-venti round per chiamare l'estrazione.
+(**Sopravvivenza**, **Boss Rush**, **Allenamento**, **Remix**) e tre sfide a seed fisso.
 
 Tutto gira lato client: rendering Three.js su WebGL, fisica Rapier 3D compilata in WebAssembly,
 audio sintetizzato con la Web Audio API. Nessun backend, nessuna API key, nessun servizio a pagamento.
@@ -39,7 +37,6 @@ npm test            # test di logica (Vitest)
 npm run test:e2e    # test end-to-end (Playwright; esegue build + preview)
 npm run icons       # rigenera le icone PWA in public/icons
 node scripts/mobile-shots.mjs      # screenshot mobile (gioco su http://127.0.0.1:5173)
-node scripts/zombies-shots.mjs     # run zombies mobile: HUD, fuoco touch, screenshot
 node scripts/capture-previews.mjs  # rigenera le anteprime dei livelli in public/previews
 node scripts/pwa-check.mjs         # verifica service worker e avvio offline della build
 ```
@@ -77,18 +74,6 @@ all'avvio: se il WASM non parte, il gioco mostra la schermata di errore invece d
 Gamepad (Gamepad API) supportato come opzione secondaria: stick sinistro per muoversi,
 stick destro per la camera, A pugno, X calcio, B schivata, Y speciale, Start pausa.
 
-### Zombies (layout shooter)
-
-| Azione | Touch | Desktop |
-| --- | --- | --- |
-| Muoversi | stick sinistro | `WASD` / frecce |
-| Mirare | trascina sulla zona libera | mouse (pointer lock o trascinamento) |
-| Fuoco | **FUOCO** | click sinistro (auto con il mitra) |
-| Ricarica | **RICARICA** | `R` |
-| Cambia slot | **CAMBIA** | click destro / `1` `2` |
-| Interagisci / ripara | **INTERAGISCI** | `E` |
-| Schivata | **SCHIVA** | `Spazio` |
-
 ---
 
 ## Il gioco
@@ -102,20 +87,23 @@ stick destro per la camera, A pugno, X calcio, B schivata, Y speciale, Start pau
   defeated) con token di attacco per non accalcare il giocatore, telegraph a terra, schivate
   e attacchi ad area per il boss.
 - **Nemici**: Maranza Base, Puffer, Turbo, più il boss con tre fasi e attacchi annunciati.
-- **Livelli**: nove arene notturne in tre capitoli, ognuna con identità visiva e sonora propria.
+- **Livelli**: dodici arene notturne in tre capitoli, ognuna con identità visiva e sonora propria.
   - **Capitolo I — Centro**
     1. **Stazione Centrale** — banchina, tram giallo, panini.
     2. **Metro Milano** — banchina della linea gialla, treno fermo, luci al neon.
     3. **Navigli Nightlife** — canale con acqua animata, barche ormeggiate, spritz e insegne al neon.
+    4. **Brera** — vicoli lastricati, Pinacoteca, gallerie, caffè e luci appese ai palazzi.
   - **Capitolo II — Piazze**
-    4. **Duomo Showdown** — piazza, palco e il Re del Borsello (boss di metà campagna).
-    5. **Porta Venezia** — corso, portici, edicola e il Buttafuori (boss di capitolo).
-    6. **Parco Sempione** — prato, alberi, campo da basket e il Personal Trainer.
+    5. **Duomo Showdown** — piazza, palco e il Re del Borsello (boss di metà campagna).
+    6. **Porta Venezia** — corso, portici, edicola e il Buttafuori (boss di capitolo).
+    7. **Parco Sempione** — prato, alberi, campo da basket e il Personal Trainer.
+    8. **CityLife** — tre torri illuminate, piazzale, fontana e vetrine del shopping district.
   - **Capitolo III — Quartieri**
-    7. **Isola** — cantiere delle torri, container, ponteggi e il Consiglio del Borsello.
-    8. **Darsena** — mercato sul naviglio, faro, banchine e il DJ.
-    9. **Tetti di Milano** — rooftop del Bosco Verticale, eliporto e il Re dei Tetti (finale).
-- **Selezione livelli**: schermata dedicata con nove anteprime 16:9 generate dalle vere arene,
+    9. **Isola** — cantiere delle torri, container, ponteggi e il Consiglio del Borsello.
+    10. **Città Studi** — Politecnico, tram fermo, muri scritti e bar economici.
+    11. **Darsena** — mercato sul naviglio, faro, banchine e il DJ.
+    12. **Tetti di Milano** — rooftop del Bosco Verticale, eliporto e il Re dei Tetti (finale).
+- **Selezione livelli**: schermata dedicata con dodici anteprime 16:9 generate dalle vere arene,
   capitolo di appartenenza, record per livello, stelle (ottenute da salute residua e tempo),
   livelli bloccati finché non si completa il precedente e avanzamento della campagna.
   Si può partire da qualsiasi piazza sbloccata.
@@ -133,16 +121,10 @@ stick destro per la camera, A pugno, X calcio, B schivata, Y speciale, Start pau
   - **Remix** — piazza e due modificatori derivati da un seed, mostrato in HUD e nel risultato.
   - **Sfide** — Tecnica, Pressione ed Essenziale con seed fisso e effetti dichiarati; i record
     delle modalità vivono in `localStorage` sotto `maranza-fight-3:modes` e non toccano la campagna.
-- **Notte morta a Milano** (modalità separata): mappa a cinque settori collegati da porte
-  acquistabili, finestre barricabili in ogni zona, round con ondate crescenti, armi al muro,
-  corrente, tre perk (Resistenza, Mani Veloci, Passo Lungo), munizioni, doppio punteggio e
-  riparazione delle barricate. Due regole: **Infinita** (record personale) ed **Estrazione**
-  (sopravvivi a venti round, poi resta nella zona per otto secondi sotto pressione). Checkpoint
-  separato tra un round e l'altro, record e run in pausa nella schermata dedicata.
 - **Presentazione**: menu, selezione livelli, schermata modalità con record e sfide, come giocare,
   impostazioni (qualità bassa/media/alta, volumi, sensibilità, inversione Y, camera shake, zona morta),
-  pausa, livelli completati, vittoria, game over, briefing e risultati Zombies, risultati delle
-  modalità (punteggio, combo, KO, tempo, seed), schermata di rotazione e schermata di errore WebGL.
+  pausa, livelli completati, vittoria, game over, risultati delle modalità (punteggio, combo, KO,
+  tempo, seed), schermata di rotazione e schermata di errore WebGL.
 
 ### Qualità e performance
 
@@ -162,20 +144,19 @@ src/
 ├── entities/               Fighter, Player, Enemy, Boss, Pickup
 ├── combat/                 CombatSystem, HitDetection, ComboSystem, tipi e specifiche attacco
 ├── ai/                     StateMachine, AttackDirector (token di attacco)
-├── world/                  LevelManager (9 livelli, 3 capitoli), Arena, Environment (props/luci/animazioni)
+├── world/                  LevelManager (12 livelli, 3 capitoli), Arena, Environment (props/luci/animazioni)
 ├── graphics/               CharacterFactory (modelli procedurali), AnimationSystem, Effects
 ├── controls/               InputManager, KeyboardInput, TouchControls, GamepadInput
 ├── ui/                     HUD, UI (menu, schermate, impostazioni)
 ├── audio/                  AudioManager (sintesi SFX + musica procedurale)
 ├── systems/                WaveManager, SaveManager (v3 + migrazione), GameModes (regole, seed, modificatori), ModeSave, levelIds, SettingsManager
-├── zombies/                ZombiesMode, ZombiesMap, Zombie, Weapons, WeaponView, ZombieSave
 └── styles/main.css
 public/
 ├── previews/               anteprime 16:9 delle arene (renderizzate dalle vere scene)
 ├── icons/, manifest.webmanifest, sw.js, _headers
 scripts/
 ├── capture-previews.mjs    render headless delle arene per la selezione livelli
-├── mobile-shots.mjs, zombies-shots.mjs, pwa-check.mjs, gen-icons.mjs
+├── mobile-shots.mjs, pwa-check.mjs, gen-icons.mjs
 ```
 
 ---
@@ -183,25 +164,22 @@ scripts/
 ## Test
 
 ```bash
-npm test          # 87 test di logica: hit detection, combo, salvataggi (campagna, zombies, modalità), armi, catalogo livelli, modalità/seed, ondate, state machine, animazioni, director
-npm run test:e2e  # 36 test browser reali (desktop + mobile emulato): 32 eseguiti, 4 saltati per progetto
+npm test          # 68 test di logica: hit detection, combo, salvataggi (campagna, modalità), catalogo livelli, modalità/seed, ondate, state machine, animazioni, director
+npm run test:e2e  # 34 test browser reali (desktop + mobile emulato): 31 eseguiti, 3 saltati
 ```
 
 I test Playwright coprono: boot con WebGL e Rapier attivi, avvio partita, movimento da tastiera,
 rotazione camera col mouse, pugni con danno/punteggio, pausa e ripresa, game over e riprova,
-boss attivo con barra dedicata al Duomo, selezione livelli (nove schede in tre capitoli, blocchi,
-avvio della piazza scelta), schermata di rotazione in portrait, joystick touch e pulsanti con
-drag camera multitouch. Per le modalità: griglia e sfide, sopravvivenza 1/20, primo boss della
+boss attivo con barra dedicata al Duomo, selezione livelli (dodici schede in tre capitoli, blocchi,
+avvio della piazza scelta), caricamento con ondate di Brera, CityLife e Città Studi, schermata di
+rotazione in portrait, joystick touch e pulsanti con drag camera multitouch. Per le modalità: griglia e sfide, sopravvivenza 1/20, primo boss della
 Boss Rush, manichino da allenamento con danno reale, modificatori della sfida Essenziale, seed
-Remix in HUD e nella schermata di risultato, card leggibili a 915×412. Per Zombies: ingresso dal
-menu, HUD attivo, sparo con danno reale, chiusura del round, layout mobile senza sovrapposizioni
-tra arma e stick e fuoco touch. I test desktop (tastiera, mouse e mira zombies) sono saltati in
-emulazione mobile perché lì i comandi sono touch.
+Remix in HUD e nella schermata di risultato, card leggibili a 915×412. I test desktop (tastiera e
+mouse) sono saltati in emulazione mobile perché lì i comandi sono touch.
 
 I test e2e girano sulla build di produzione servita da `vite preview` (porta 4173), non sul dev server.
 Gli hook `window.__MARANZA__` (snapshot, spawn, teleport, clearWave, jumpToLevel, hurtPlayer,
-captureLevel e gli equivalenti `zombies*`) servono solo ai test e agli strumenti offline,
-e non espongono altro stato.
+captureLevel) servono solo ai test e agli strumenti offline, e non espongono altro stato.
 Le anteprime dei livelli si rigenerano con `node scripts/capture-previews.mjs`: lo script avvia
 un dev server temporaneo, apre `/?capture=N`, attende il render dell'arena e salva il canvas in
 `public/previews/level-N.jpg` (1200×675, Chromium headless con SwiftShader).
@@ -215,12 +193,11 @@ un dev server temporaneo, apre `/?capture=N`, attende il render dell'arena e sal
   30 FPS stabili su smartphone di fascia media non è stato verificato su hardware reale.
 - Il service worker non è attivo durante i test Playwright (`serviceWorkers: 'block'`).
 - I sei boss sono presenti in campagna e nella Boss Rush; la Boss Rush è stata completata in
-  browser, mentre i livelli 5–8 non sono stati rigiocati fino alla vittoria dopo l'aggiunta dei
-  rispettivi boss.
+  browser, mentre Porta Venezia, Sempione, Isola e Darsena non sono stati rigiocati fino alla
+  vittoria dopo l'aggiunta dei rispettivi boss.
+- Brera, CityLife e Città Studi sono state avviate con ondate attive, ma non completate in browser.
 - Sopravvivenza genera venti round con boss ogni cinque, ma la scalata completa non è stata
   chiusa in browser; delle tre sfide è stata verificata a fondo solo *Essenziale*.
-- Zombies è stato bilanciato e verificato in emulazione Chromium (desktop e 844×390): i round
-alti, l'estrazione e la corsa alle venti ondate non sono stati provati su hardware reale.
 
 ---
 

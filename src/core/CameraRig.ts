@@ -25,8 +25,6 @@ export class CameraRig {
   distance = 4.3;
   sensitivity = 1;
   invertY = false;
-  /** Shooter look-ahead: the camera looks this many metres past the player. */
-  aimLook = 0;
   shakeEnabled = true;
   private trauma = 0;
   private lift = 0;
@@ -155,11 +153,6 @@ export class CameraRig {
     this.camera.position.copy(camPos);
     this.updateShake(dt);
     this.lookPoint.copy(this.smoothTarget);
-    if (this.aimLook > 0) {
-      this.lookPoint.x -= Math.sin(this.yaw) * this.aimLook;
-      this.lookPoint.z -= Math.cos(this.yaw) * this.aimLook;
-      this.lookPoint.y += 0.16;
-    }
     this.camera.lookAt(this.lookPoint);
   }
 

@@ -13,7 +13,7 @@ import { chromium } from '@playwright/test';
 
 const PORT = Number(process.env.CAPTURE_PORT ?? 5199);
 const ORIGIN = `http://127.0.0.1:${PORT}`;
-const LEVELS = 9;
+const LEVELS = 12;
 const VIEWPORT = { width: 1200, height: 675 };
 
 async function waitForServer(url, timeoutMs = 60_000) {

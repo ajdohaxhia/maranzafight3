@@ -11,6 +11,7 @@ import {
 } from '../../src/systems/GameModes';
 import { ModeSave, MODES_SAVE_KEY, parseModeRecords, recordRun } from '../../src/systems/ModeSave';
 import type { StorageLike } from '../../src/systems/ModeSave';
+import { LEVELS } from '../../src/world/LevelManager';
 
 class MemoryStorage implements StorageLike {
   data = new Map<string, string>();
@@ -47,6 +48,13 @@ describe('mode rules', () => {
     expect(rules.bossRush).toEqual(['buttafuori', 'trainer', 'dj', 'borsello', 'tetti', 'consiglio']);
     expect(new Set(rules.bossRush).size).toBe(rules.bossRush!.length);
     expect(rules.records).toBe(true);
+  });
+
+  it('anchors survival and boss rush to the Duomo by id, not a stale index', () => {
+    const duomo = LEVELS.findIndex((level) => level.id === 'duomo');
+    expect(duomo).toBeGreaterThanOrEqual(0);
+    expect(modeRules('survival').levelIndex).toBe(duomo);
+    expect(modeRules('bossRush').levelIndex).toBe(duomo);
   });
 
   it('keeps training scoreless and wave-free', () => {

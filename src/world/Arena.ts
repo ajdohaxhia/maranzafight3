@@ -1494,6 +1494,356 @@ export function buildIsola(physics: Physics, quality: Quality): ArenaBuild {
 }
 
 /**
+ * CHAPTER 1 — BRERA. Narrow cobbled lanes, gallery windows and café tables:
+ * a tight stage where the side façades do most of the framing.
+ */
+export function buildBrera(physics: Physics, quality: Quality): ArenaBuild {
+  const builder = new LevelBuilder(physics, quality);
+  const bounds = { minX: -19, maxX: 19, minZ: -13, maxZ: 13 };
+  builder.addSky('#05060e', '#2b2430');
+  builder.addStars(300);
+  builder.addSkyline(64, 34, -6, [10, 24]);
+  builder.ground(44, 34, makeCobbleTexture(), 0, 4.2);
+
+  builder.addLights({
+    hemiSky: '#9a9bc8',
+    hemiGround: '#2a211c',
+    hemiIntensity: 1.2,
+    moonColor: '#e3e4ff',
+    moonIntensity: 2.3,
+    moonPosition: [-10, 24, 10],
+    shadows: true,
+    rimColor: '#ffb35c',
+    rimIntensity: 0.8,
+    rimPosition: [14, 7, -12],
+  });
+
+  const plaster = [
+    builder.material('#6a5745', { roughness: 0.94 }),
+    builder.material('#54453c', { roughness: 0.94 }),
+    builder.material('#77644f', { roughness: 0.92 }),
+  ];
+  const roof = builder.material('#312822', { roughness: 0.96 });
+  const shutter = builder.material('#263229', { roughness: 0.9 });
+  const shopColors = ['#ffcf82', '#ff3ea5', '#4fd7ff', '#ffd400'];
+
+  // Palazzi on both sides: the inner edge is the playable street wall.
+  for (const side of [-1, 1]) {
+    const x = side * 17.4;
+    for (let i = 0; i < 4; i++) {
+      const z = -10 + i * 6.6;
+      const height = 7.2 + (i % 2) * 2.4;
+      builder.box({ pos: [x, height / 2, z], size: [5.4, height, 6.1], material: plaster[i % plaster.length], collider: true, receive: true });
+      builder.box({ pos: [x, height + 0.25, z], size: [5.9, 0.5, 6.6], material: roof });
+      builder.box({ pos: [x - side * 2.45, 4.25, z], size: [0.55, 0.14, 5.7], color: '#3a3028' });
+      for (let row = 0; row < 2; row++) {
+        for (const oz of [-1.65, 1.65]) {
+          const wx = x - side * 2.76;
+          const wy = 2.4 + row * 2.5;
+          glowPlane(builder, [wx, wy, z + oz], [1.15, 1.55], row === 0 && i % 2 === 0 ? '#ffcea0' : '#9fb8cf', side === 1 ? Math.PI / 2 : -Math.PI / 2, 0.7);
+          builder.box({ pos: [wx - side * 0.05, wy, z + oz - 0.78], size: [0.08, 1.7, 0.2], material: shutter });
+          builder.box({ pos: [wx - side * 0.05, wy, z + oz + 0.78], size: [0.08, 1.7, 0.2], material: shutter });
+        }
+      }
+      if (i === 1) {
+        builder.addAwning([x - side * 2.5, 3.2, z + 0.6], 4.4, 1.6, side === 1 ? '#7a2f3f' : '#2f5a52', side === 1 ? Math.PI / 2 : -Math.PI / 2);
+      }
+    }
+    builder.addLamp([x - side * 3.9, 0, -10.5], '#ffd28a', 18, 4.8, false);
+    builder.addLamp([x - side * 3.9, 0, 8.5], '#ffd28a', 18, 4.8, false);
+    builder.addStringLights([x - side * 3.3, 5.6, -11], [x - side * 3.3, 5.6, 11], '#ffe6b0', 18, 1.3);
+  }
+
+  // Pinacoteca di Brera: classical façade and a lit courtyard entrance.
+  const stone = builder.material('#5c5142', { roughness: 0.92 });
+  const stoneDark = builder.material('#3d352d', { roughness: 0.94 });
+  builder.box({ pos: [0, 7, -19], size: [27, 14, 5], material: stone, collider: true, receive: true });
+  builder.box({ pos: [0, 14.2, -19], size: [27.6, 1.4, 5.5], material: stoneDark });
+  for (const x of [-10, -5, 0, 5, 10]) {
+    builder.cylinder({ pos: [x, 4.3, -16.2], radiusTop: 0.34, radiusBottom: 0.42, height: 8.6, material: stone, collider: true });
+    builder.box({ pos: [x, 8.65, -16.2], size: [1.1, 0.35, 1.1], material: stoneDark });
+    glowPlane(builder, [x, 11, -16.38], [1.4, 2.5], '#ffd28a', 0, 0.55);
+  }
+  builder.box({ pos: [0, 4.6, -16.1], size: [4.4, 9.2, 0.6], color: '#17130f' });
+  builder.addGlow([0, 4.4, -15.7], '#ffd28a', 10, 0.3);
+  builder.sign('BRERA', { pos: [0, 9.8, -16.3], size: [6, 1.6], bg: '#0c0b0e', fg: '#ffd400', accent: '#ff3ea5', sub: 'PINACOTECA' });
+
+  // Gallery windows and café tables along the street.
+  for (const [x, z, color, label] of [
+    [-13.9, -5, shopColors[0], 'GALLERIA'],
+    [-13.9, 5, shopColors[2], 'LIBRI'],
+    [13.9, -5, shopColors[1], 'ATELIER'],
+    [13.9, 5, shopColors[3], 'CAFFÈ'],
+  ] as Array<[number, number, string, string]>) {
+    glowPlane(builder, [x, 2.3, z], [2.8, 1.9], color, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0.35);
+    builder.sign(label, {
+      pos: [x + (x < 0 ? -0.12 : 0.12), 3.5, z],
+      size: [2.3, 0.8],
+      rotY: x < 0 ? Math.PI / 2 : -Math.PI / 2,
+      bg: '#0b0b0e',
+      fg: '#ffd400',
+      accent: color,
+      sub: 'BRERA',
+    });
+    builder.addPointLight([x + (x < 0 ? 1.2 : -1.2), 2.5, z], color, 12, 9);
+  }
+  for (const [x, z] of [[-7, 6], [7, 6], [-8, -6], [8, -6]] as Array<[number, number]>) {
+    builder.cylinder({ pos: [x, 0.38, z], radiusTop: 0.3, radiusBottom: 0.24, height: 0.76, color: '#26282c' });
+    builder.cylinder({ pos: [x, 0.78, z], radiusTop: 0.66, radiusBottom: 0.66, height: 0.08, color: '#4a3a2a', collider: true });
+    builder.addUmbrella([x, 0, z], x < 0 ? '#7a2f3f' : '#2f5a52');
+  }
+  builder.addBench([-11, 0, 10], Math.PI / 2);
+  builder.addBench([11, 0, -10], -Math.PI / 2);
+  builder.addPlanter([-4, 0, 10], 1.5);
+  builder.addPlanter([4, 0, -10], 1.5);
+  builder.addBin([-15, 0, 2]);
+  builder.addBin([15, 0, -2]);
+  builder.addPuddle(-3, 3, 3.4, 1.6, '#ff3ea5', 0.06);
+  builder.addPuddle(6, -4, 3, 1.4, '#4fd7ff', 0.05);
+  builder.boundary(bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ, 1.5);
+
+  return {
+    group: builder.group,
+    builder,
+    spawnPoints: [
+      new THREE.Vector3(-14, 0, -10),
+      new THREE.Vector3(14, 0, -10),
+      new THREE.Vector3(-14, 0, 8),
+      new THREE.Vector3(14, 0, 8),
+      new THREE.Vector3(-6, 0, -11),
+      new THREE.Vector3(6, 0, -11),
+      new THREE.Vector3(-8, 0, 11),
+      new THREE.Vector3(8, 0, 11),
+    ],
+    playerStart: new THREE.Vector3(0, 0, 10),
+    bossSpawn: new THREE.Vector3(0, 0, -10),
+    preview: { position: new THREE.Vector3(0, 7.2, 24), lookAt: new THREE.Vector3(0, 2.8, -7) },
+    bounds,
+  };
+}
+
+/**
+ * CHAPTER 2 — CITYLIFE. Three lit towers, a shopping boulevard and a fountain:
+ * modern Milan, wide sightlines and glass reflections instead of porticoes.
+ */
+export function buildCityLife(physics: Physics, quality: Quality): ArenaBuild {
+  const builder = new LevelBuilder(physics, quality);
+  const bounds = { minX: -21, maxX: 21, minZ: -14, maxZ: 14 };
+  builder.addSky('#04060f', '#1d2332');
+  builder.addStars(360);
+  builder.addSkyline(78, 42, -8, [14, 40]);
+  builder.ground(50, 38, makePlazaTexture(), 0, 5);
+
+  builder.addLights({
+    hemiSky: '#9fb8df',
+    hemiGround: '#25242c',
+    hemiIntensity: 1.25,
+    moonColor: '#e5edff',
+    moonIntensity: 2.5,
+    moonPosition: [16, 28, 12],
+    shadows: true,
+    rimColor: '#4fd7ff',
+    rimIntensity: 0.9,
+    rimPosition: [-18, 8, 12],
+  });
+
+  // The three towers: dark glass, horizontal light bands, lit windows.
+  const glass = builder.material('#161c26', { roughness: 0.35, metalness: 0.65 });
+  const mullion = builder.material('#0e1118', { roughness: 0.5, metalness: 0.4 });
+  for (const [tx, tz, w, d, h] of [
+    [-27, -27, 15, 12, 50],
+    [0, -31, 18, 14, 64],
+    [27, -26, 14, 12, 44],
+  ] as Array<[number, number, number, number, number]>) {
+    builder.box({ pos: [tx, h / 2, tz], size: [w, h, d], material: glass, receive: true });
+    builder.box({ pos: [tx, h + 0.5, tz], size: [w + 0.8, 1, d + 0.8], material: mullion });
+    for (let row = 0; row < 9; row++) {
+      const y = 4 + row * (h / 10);
+      builder.box({ pos: [tx, y, tz + d / 2 + 0.06], size: [w, 0.12, 0.08], color: '#6fd8ff' });
+      for (let col = 0; col < 4; col++) {
+        if ((row + col) % 3 === 0) continue;
+        glowPlane(builder, [tx - w / 2 + 1.5 + col * ((w - 3) / 3), y + 1.8, tz + d / 2 + 0.08], [1.35, 1.8], col % 2 === 0 ? '#ffd28a' : '#9fc8e0', 0, 0.5);
+      }
+    }
+  }
+
+  // Fountain at the centre of the piazzale.
+  const basin = builder.material('#4a4e55', { roughness: 0.6 });
+  builder.cylinder({ pos: [0, 0.42, 1], radiusTop: 2.5, radiusBottom: 2.7, height: 0.84, material: basin, collider: true, segments: 18 });
+  builder.cylinder({ pos: [0, 0.86, 1], radiusTop: 2.1, radiusBottom: 2.1, height: 0.08, color: '#102430', segments: 18 });
+  builder.cylinder({ pos: [0, 1.5, 1], radiusTop: 0.24, radiusBottom: 0.4, height: 1.3, color: '#39434a', segments: 10 });
+  builder.addGlow([0, 1.6, 1], '#4fd7ff', 5.5, 0.35);
+  builder.addLightCone([0, 1.7, 1], '#4fd7ff', 4.4, 1.4, 0.06);
+  builder.addPuddle(0, 1, 4.2, 4.2, '#4fd7ff', 0.06);
+
+  // Shopping arcades on both long sides.
+  for (const side of [-1, 1]) {
+    const x = side * 18.4;
+    builder.box({ pos: [x, 3.3, 0], size: [5.2, 6.6, 27], color: '#1b2029', collider: true, receive: true });
+    builder.box({ pos: [x - side * 2.3, 6.9, 0], size: [6.2, 0.5, 27.4], color: '#2c3742' });
+    for (let i = 0; i < 5; i++) {
+      const z = -9.5 + i * 4.75;
+      const color = ['#4fd7ff', '#ffd400', '#ff3ea5'][(i + (side === 1 ? 1 : 0)) % 3]!;
+      glowPlane(builder, [x - side * 2.64, 2.4, z], [3.4, 2.2], color, side === 1 ? Math.PI / 2 : -Math.PI / 2, 0.38);
+      builder.sign(['SHOP', 'FOOD', 'ART', 'CAFFÈ', 'STORE'][i]!, {
+        pos: [x - side * 2.7, 4.4, z],
+        size: [2.6, 0.75],
+        rotY: side === 1 ? Math.PI / 2 : -Math.PI / 2,
+        bg: '#0b0d12',
+        fg: '#ffd400',
+        accent: color,
+        sub: 'CITYLIFE',
+      });
+      builder.addPointLight([x - side * 3.7, 2.7, z], color, 14, 10);
+    }
+    builder.addLamp([x - side * 4.8, 0, -10], '#9fe8ff', 20, 5.2, false);
+    builder.addLamp([x - side * 4.8, 0, 9], '#9fe8ff', 20, 5.2, false);
+  }
+
+  builder.sign('CITYLIFE', { pos: [0, 6, -17.8], size: [6.2, 1.5], bg: '#0c0f16', fg: '#4fd7ff', accent: '#ffd400', sub: 'TRE TORRI' });
+  builder.addGlow([0, 6, -16.9], '#4fd7ff', 12, 0.4);
+  builder.addBench([-9, 0, 9], 0);
+  builder.addBench([9, 0, -9], Math.PI);
+  builder.addBench([-16, 0, 8], Math.PI / 2);
+  builder.addPlanter([-7, 0, -9], 2);
+  builder.addPlanter([7, 0, 9], 2);
+  builder.addTree([-15, 0, -9], 4.8);
+  builder.addTree([15, 0, 9], 4.6);
+  builder.addBin([-4, 0, 8]);
+  builder.addBin([4, 0, -8]);
+  builder.addStringLights([-14, 5.2, 11], [14, 5.2, 11], '#9fe8ff', 20, 1.1);
+  builder.addPuddle(-10, 4, 3.6, 1.8, '#4fd7ff', 0.07);
+  builder.addPuddle(9, -3, 3.2, 1.5, '#ffd400', 0.05);
+  builder.boundary(bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ, 1.5);
+
+  return {
+    group: builder.group,
+    builder,
+    spawnPoints: [
+      new THREE.Vector3(-17, 0, -11),
+      new THREE.Vector3(17, 0, -11),
+      new THREE.Vector3(-17, 0, 9),
+      new THREE.Vector3(17, 0, 9),
+      new THREE.Vector3(-6, 0, -12),
+      new THREE.Vector3(6, 0, -12),
+      new THREE.Vector3(-8, 0, 12),
+      new THREE.Vector3(8, 0, 12),
+    ],
+    playerStart: new THREE.Vector3(0, 0, 11),
+    bossSpawn: new THREE.Vector3(0, 0, -11),
+    preview: { position: new THREE.Vector3(0, 9.2, 25), lookAt: new THREE.Vector3(0, 4.4, -12) },
+    bounds,
+  };
+}
+
+/**
+ * CHAPTER 3 — CITTÀ STUDI. University gates, a tram, graffiti and cheap bars:
+ * concrete, fluorescent light and a wide boulevard for the last ordinary stop.
+ */
+export function buildCittaStudi(physics: Physics, quality: Quality): ArenaBuild {
+  const builder = new LevelBuilder(physics, quality);
+  const bounds = { minX: -19, maxX: 19, minZ: -13, maxZ: 13 };
+  builder.addSky('#04070d', '#1e2a2b');
+  builder.addStars(320);
+  builder.addSkyline(70, 38, -6, [12, 30]);
+  builder.ground(46, 36, makePlazaTexture(), 0, 5);
+
+  builder.addLights({
+    hemiSky: '#96b2c8',
+    hemiGround: '#232620',
+    hemiIntensity: 1.25,
+    moonColor: '#e0efff',
+    moonIntensity: 2.4,
+    moonPosition: [-12, 26, 12],
+    shadows: true,
+    rimColor: '#9dff6a',
+    rimIntensity: 0.7,
+    rimPosition: [16, 7, -14],
+  });
+
+  // Politecnico façade: brick, concrete and a lit portico.
+  const brick = builder.material('#5a4237', { roughness: 0.95 });
+  const concrete = builder.material('#575a58', { roughness: 0.9 });
+  const dark = builder.material('#2a2c2d', { roughness: 0.9 });
+  builder.box({ pos: [0, 6.5, -19], size: [30, 13, 5], material: brick, collider: true, receive: true });
+  builder.box({ pos: [0, 13.2, -19], size: [30.8, 1.2, 5.5], material: concrete });
+  builder.box({ pos: [0, 3.3, -16.2], size: [24, 6.6, 0.5], material: dark });
+  for (let x = -10; x <= 10; x += 5) {
+    builder.cylinder({ pos: [x, 3.2, -15.8], radiusTop: 0.35, radiusBottom: 0.42, height: 6.4, material: concrete, collider: true });
+    builder.addPointLight([x, 5.2, -15], '#d9ffb0', 10, 8);
+  }
+  builder.sign('POLITECNICO', { pos: [0, 8.2, -16.3], size: [6.8, 1.2], bg: '#0b0e0c', fg: '#d9ffb0', accent: '#ffd400', sub: 'CITTÀ STUDI' });
+  builder.addGlow([0, 4.4, -15.5], '#d9ffb0', 12, 0.28);
+
+  // Graffiti wall on the east side, with a lit underpass arch.
+  builder.box({ pos: [18, 2.4, -1], size: [0.6, 4.8, 22], color: '#2b2e2c', collider: true });
+  for (let i = 0; i < 6; i++) {
+    const z = -9 + i * 3.6;
+    const color = ['#ff3ea5', '#4fd7ff', '#ffd400', '#9dff6a'][i % 4]!;
+    glowPlane(builder, [17.66, 2.2, z], [2.4, 2.4], color, -Math.PI / 2, 0.22);
+    builder.box({ pos: [17.6, 2.2 + (i % 2 ? 0.6 : -0.5), z], size: [0.04, 0.16, 1.9], color, rotY: 0 });
+  }
+  builder.sign('CITTA STUDI', { pos: [17.55, 4.2, 4], size: [3.4, 0.9], rotY: -Math.PI / 2, bg: '#0b0d0c', fg: '#ff3ea5', accent: '#9dff6a', sub: 'STUDENTI' });
+
+  // Cheap bar and kiosk on the west side.
+  builder.box({ pos: [-17.2, 2.1, 3], size: [3.8, 4.2, 9], color: '#2c2925', collider: true });
+  builder.addAwning([-15.2, 4.1, 3], 4, 1.8, '#2f6a52', Math.PI / 2);
+  builder.sign('BAR', { pos: [-15.1, 3.1, 3], size: [2.4, 0.9], rotY: Math.PI / 2, bg: '#0b0b0d', fg: '#ffd400', accent: '#9dff6a', sub: 'SPRITZ 3€' });
+  builder.addPointLight([-14.6, 2.6, 3], '#ffd28a', 16, 11);
+
+  // Tram tracks and a stopped yellow tram beyond the east edge, clear of the
+  // preview camera and of the fight floor.
+  for (const x of [23.4, 26.6]) {
+    builder.box({ pos: [x, 0.014, 0], size: [0.12, 0.02, 34], color: '#8b887e' });
+  }
+  builder.box({ pos: [25, 1.9, 0], size: [3.4, 3.4, 26], color: '#c9a51b' });
+  builder.box({ pos: [25, 3.7, 0], size: [3.6, 0.3, 26.2], color: '#7e6a14' });
+  for (let i = 0; i < 7; i++) {
+    glowPlane(builder, [23.25, 2.35, -11 + i * 3.6], [2.2, 1.1], '#ffe7a8', -Math.PI / 2, 0.8);
+  }
+  builder.addGlow([23.4, 2.5, 0], '#ffd28a', 7, 0.25);
+
+  // Tables, bikes, benches and fluorescent signs.
+  for (const [x, z] of [[-6, 8], [6, 8], [-9, -7], [9, -7]] as Array<[number, number]>) {
+    builder.cylinder({ pos: [x, 0.38, z], radiusTop: 0.3, radiusBottom: 0.24, height: 0.76, color: '#26282c' });
+    builder.cylinder({ pos: [x, 0.78, z], radiusTop: 0.64, radiusBottom: 0.64, height: 0.08, color: '#4a3a2a', collider: true });
+  }
+  builder.addBench([-11, 0, 11], Math.PI / 2);
+  builder.addBench([11, 0, -11], -Math.PI / 2);
+  builder.addPlanter([-4, 0, 11], 1.6);
+  builder.addPlanter([4, 0, -11], 1.6);
+  builder.addTree([-14, 0, -10], 4.4);
+  builder.addTree([14, 0, 10], 4.2);
+  builder.addBin([-10, 0, 2]);
+  builder.addBin([10, 0, -2]);
+  builder.addStringLights([-14, 4.6, 0], [14, 4.6, 0], '#d9ffb0', 18, 1.2);
+  builder.addStringLights([-14, 4.8, -9], [14, 4.8, -9], '#ffe6b0', 18, 1.0);
+  builder.addPuddle(-5, 4, 3.2, 1.6, '#9dff6a', 0.06);
+  builder.addPuddle(8, 5, 3, 1.4, '#ff3ea5', 0.05);
+  builder.boundary(bounds.minX, bounds.maxX, bounds.minZ, bounds.maxZ, 1.5);
+
+  return {
+    group: builder.group,
+    builder,
+    spawnPoints: [
+      new THREE.Vector3(-15, 0, -10),
+      new THREE.Vector3(15, 0, -10),
+      new THREE.Vector3(-15, 0, 8),
+      new THREE.Vector3(15, 0, 8),
+      new THREE.Vector3(-6, 0, -11),
+      new THREE.Vector3(6, 0, -11),
+      new THREE.Vector3(-8, 0, 11),
+      new THREE.Vector3(8, 0, 11),
+    ],
+    playerStart: new THREE.Vector3(0, 0, 10),
+    startYaw: 0.35,
+    bossSpawn: new THREE.Vector3(0, 0, -10),
+    preview: { position: new THREE.Vector3(0, 7.4, 24), lookAt: new THREE.Vector3(0, 2.8, -8) },
+    bounds,
+  };
+}
+
+/**
  * CHAPTER 2 — DARSENA. Open waterfront with a lighthouse tower, market stalls,
  * warm lights and water beyond a solid quay.
  */

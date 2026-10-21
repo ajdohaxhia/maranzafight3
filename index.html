@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#0b0b0d" />
     <meta
       name="description"
-      content="MARANZA FIGHT 3 — beat 'em up arcade 3D ambientato in una Milano caricaturale. Combatti i maranza attraverso nove livelli in tre capitoli, dal Naviglio ai tetti del Bosco Verticale, fino al Re dei Tetti."
+      content="MARANZA FIGHT 3 — beat 'em up arcade 3D ambientato in una Milano caricaturale. Combatti i maranza attraverso dodici livelli in tre capitoli, dal Naviglio ai tetti del Bosco Verticale, fino al Re dei Tetti."
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -80,11 +80,10 @@
             <span class="btn__sub">NUOVA PARTITA</span>
           </button>
           <button class="btn" id="btn-levels"><span class="btn__index">02</span><span class="btn__label">LIVELLI</span><span class="btn__sub">Scegli la piazza</span></button>
-          <button class="btn" id="btn-zombies"><span class="btn__index">03</span><span class="btn__label">ZOMBIES</span><span class="btn__sub">Notte morta a Milano</span></button>
-          <button class="btn" id="btn-modes"><span class="btn__index">04</span><span class="btn__label">MODALITÀ</span><span class="btn__sub">Sfide, boss rush, remix</span></button>
-          <button class="btn" id="btn-help"><span class="btn__index">05</span><span class="btn__label">COME GIOCARE</span></button>
-          <button class="btn" id="btn-settings"><span class="btn__index">06</span><span class="btn__label">IMPOSTAZIONI</span></button>
-          <button class="btn" id="btn-credits"><span class="btn__index">07</span><span class="btn__label">CREDITI</span></button>
+          <button class="btn" id="btn-modes"><span class="btn__index">03</span><span class="btn__label">MODALITÀ</span><span class="btn__sub">Sfide, boss rush, remix</span></button>
+          <button class="btn" id="btn-help"><span class="btn__index">04</span><span class="btn__label">COME GIOCARE</span></button>
+          <button class="btn" id="btn-settings"><span class="btn__index">05</span><span class="btn__label">IMPOSTAZIONI</span></button>
+          <button class="btn" id="btn-credits"><span class="btn__index">06</span><span class="btn__label">CREDITI</span></button>
         </nav>
 
         <aside class="menu__stats">
@@ -118,7 +117,7 @@
             <h2 class="levels__title">SCEGLI IL <span>LIVELLO</span></h2>
           </div>
           <div class="levels__meta">
-            <span id="levels-progress">0 / 9 LIVELLI · 0 / 27 STELLE</span>
+            <span id="levels-progress">0 / 12 LIVELLI · 0 / 36 STELLE</span>
             <span class="levels__hint">Le stelle arrivano da salute e velocità. Nessuna pietà.</span>
           </div>
         </header>
@@ -127,48 +126,6 @@
           <button class="btn btn--ghost" data-back>INDIETRO</button>
           <span class="levels__foot-note">Parti dal livello scelto con il punteggio azzerato.</span>
         </footer>
-      </section>
-
-      <!-- ══════════════ ZOMBIES BRIEFING ══════════════ -->
-      <section id="screen-zombies" class="screen screen--zombies" aria-label="Notte morta a Milano">
-        <header class="zombies__head">
-          <span class="levels__kicker">MODALITÀ SEPARATA · SURVIVAL ARCADE</span>
-          <h2 class="levels__title">NOTTE MORTA <span>A MILANO</span></h2>
-          <p class="zombies__tag">Cinque settori, porte da comprare, barricate da tenere in piedi e un solo obiettivo: vedere il sole.</p>
-        </header>
-        <div class="zombies__grid">
-          <div class="zombies__brief">
-            <h3>COME FUNZIONA</h3>
-            <p>I punti arrivano dai colpi e dai KO. Spendili per <b>aprire le porte</b>, comprare <b>armi e munizioni</b> dai muri, attivare la <b>corrente</b> e riparare le <b>barricate</b>.</p>
-            <p>Tra un round e l'altro hai dodici secondi per respirare, ricaricare e comprare. Sopravvivi a venti round e chiama l'estrazione: resta nella zona otto secondi mentre Milano prova a fermarti.</p>
-            <div class="zombies__sectors">
-              <span>BOTTEGA</span><span>VIA COMMERCIALE</span><span>CORTILE</span><span>METRO</span><span>PIAZZA</span>
-            </div>
-            <div class="zombies__controls">
-              <span><b>Desktop</b> WASD · mouse · click fuoco · R ricarica · 1/2 slot · E interagisci</span>
-              <span><b>Touch</b> stick · trascina per mirare · FUOCO · RICARICA · CAMBIA</span>
-            </div>
-          </div>
-          <div class="zombies__records">
-            <h3>ARCHIVIO SOPRAVVISSUTI</h3>
-            <div class="zombies__record-grid">
-              <div><span>MIGLIOR ROUND</span><b id="z-best-round">0</b></div>
-              <div><span>MIGLIORI KO</span><b id="z-best-kills">0</b></div>
-              <div><span>ESTRAZIONI</span><b id="z-extractions">0</b></div>
-              <div><span>RUN CHIUSE</span><b id="z-runs">0</b></div>
-            </div>
-            <p class="zombies__note" id="z-new-note">Nessuna run in pausa. Il checkpoint viene salvato tra un round e l'altro.</p>
-          </div>
-        </div>
-        <div class="zombies__actions">
-          <button class="btn btn--primary" id="z-btn-resume" hidden>
-            <span class="btn__label">RIPRENDI RUN</span>
-            <span class="btn__sub" id="z-resume-label"></span>
-          </button>
-          <button class="btn btn--primary" data-zmode="extraction"><span class="btn__label">ESTRAZIONE</span><span class="btn__sub">20 round · obiettivo finale</span></button>
-          <button class="btn" data-zmode="infinite"><span class="btn__label">INFINITA</span><span class="btn__sub">record personale</span></button>
-          <button class="btn btn--ghost" data-back>INDIETRO</button>
-        </div>
       </section>
 
       <!-- ══════════════ MODES ══════════════ -->
@@ -433,48 +390,6 @@
         </div>
       </section>
 
-      <!-- ══════════════ ZOMBIES HUD ══════════════ -->
-      <section id="zombies-hud" class="zhud" aria-label="HUD Zombies">
-        <div class="zhud__top">
-          <div class="zhud__plate zhud__plate--left">
-            <div class="zhud__round"><span>ROUND</span><b id="z-round">01</b></div>
-            <div class="zhud__hp">
-              <span class="bar bar--hp"><i class="bar__fill" id="z-hp-fill"></i></span>
-              <b id="z-hp-text">120</b>
-            </div>
-            <span class="zhud__mode" id="z-mode">INFINITA · RECORD</span>
-          </div>
-          <div class="zhud__plate zhud__plate--center">
-            <div class="zhud__points"><span>PUNTI</span><b id="z-points">00000</b></div>
-            <div class="zhud__left-count"><b id="z-left">0</b> NON-MORTI</div>
-          </div>
-          <div class="zhud__plate zhud__plate--right">
-            <div class="zhud__power" id="z-power">CORRENTE OFF</div>
-            <div class="zhud__perks" id="z-perks"></div>
-          </div>
-        </div>
-        <div class="zhud__crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
-        <div class="zhud__bottom">
-          <div class="zhud__weapon">
-            <span class="zhud__weapon-tag" id="z-weapon-tag">PISTOLA · SEMIAUTO</span>
-            <b class="zhud__weapon-name" id="z-weapon-name">LA PITTA</b>
-            <div class="zhud__ammo"><b id="z-ammo-mag">12</b><span>/</span><i id="z-ammo-reserve">096</i></div>
-            <div class="zhud__reload"><i id="z-reload-fill"></i></div>
-            <span class="zhud__reload-label" id="z-reload-label"></span>
-            <div class="zhud__slots"><span id="z-slot-0">LA PITTA</span><span id="z-slot-1">VUOTO</span></div>
-          </div>
-          <div class="zhud__intermission" id="z-intermission">
-            PROSSIMO ROUND IN <b id="z-intermission-time">8</b>s · RIPARA E COMPRA
-          </div>
-          <div class="zhud__extraction" id="z-extraction">ESTRAZIONE <b id="z-extraction-time">90s · ZONA 0%</b></div>
-          <div class="zhud__buff" id="z-buff"></div>
-          <div class="zhud__prompt" id="z-prompt" hidden>
-            <span class="key">E</span>
-            <div><b id="z-prompt-label">COMPRA</b><span id="z-prompt-sub"></span></div>
-          </div>
-        </div>
-      </section>
-
       <!-- ══════════════ PAUSE / RESULTS ══════════════ -->
       <section id="screen-pause" class="screen screen--modal" aria-label="Pausa">
         <div class="modal">
@@ -528,7 +443,7 @@
         <div class="results results--gold">
           <span class="results__kicker">MILANO È SALVA (PIÙ O MENO)</span>
           <h2 class="results__title">RE<br /><span>SPODESTATO</span></h2>
-          <p class="results__big">Il Re dei Tetti è finito in monopattino. Nove piazze, una sola notte.</p>
+          <p class="results__big">Il Re dei Tetti è finito in monopattino. Dodici piazze, una sola notte.</p>
           <div class="results__grid">
             <div><span>PUNTEGGIO FINALE</span><b id="vi-score">0</b></div>
             <div><span>MIGLIOR COMBO</span><b id="vi-combo">0</b></div>
@@ -538,26 +453,6 @@
           <div class="results__actions">
             <button class="btn btn--primary" id="btn-victory-menu"><span class="btn__label">TORNA AL MENU</span></button>
             <button class="btn" id="btn-newgame-plus"><span class="btn__label">NUOVA PARTITA</span></button>
-          </div>
-        </div>
-      </section>
-
-      <section id="screen-zombies-result" class="screen screen--results" aria-label="Fine run Zombies">
-        <div class="results results--zombies">
-          <span class="results__kicker" id="zr-kicker">RUN TERMINATA</span>
-          <h2 class="results__title" id="zr-title">NOTTE<br /><span>MORTA</span></h2>
-          <p class="results__big" id="zr-reason">I non-morti hanno vinto.</p>
-          <div class="results__grid">
-            <div><span>ROUND</span><b id="zr-round">0</b></div>
-            <div><span>KO</span><b id="zr-kills">0</b></div>
-            <div><span>HEADSHOT</span><b id="zr-headshots">0</b></div>
-            <div><span>PUNTI</span><b id="zr-points">00000</b></div>
-            <div><span>TEMPO</span><b id="zr-time">0:00</b></div>
-          </div>
-          <p class="results__note" id="zr-best">RECORD: ROUND 0</p>
-          <div class="results__actions">
-            <button class="btn btn--primary" id="btn-zr-retry"><span class="btn__label">RIPROVA</span></button>
-            <button class="btn btn--ghost" id="btn-zr-menu"><span class="btn__label">MENU</span></button>
           </div>
         </div>
       </section>
@@ -632,15 +527,6 @@
           </button>
           <button class="tbtn tbtn--special" data-action="special" aria-label="Speciale">
             <span class="tbtn__glyph">S</span><span class="tbtn__label">SPECIALE</span>
-          </button>
-          <button class="tbtn tbtn--fire" data-action="fire" aria-label="Fuoco">
-            <span class="tbtn__glyph">●</span><span class="tbtn__label">FUOCO</span>
-          </button>
-          <button class="tbtn tbtn--reload" data-action="reload" aria-label="Ricarica">
-            <span class="tbtn__glyph">R</span><span class="tbtn__label">RICARICA</span>
-          </button>
-          <button class="tbtn tbtn--swap" data-action="switchWeapon" aria-label="Cambia arma">
-            <span class="tbtn__glyph">⇄</span><span class="tbtn__label">CAMBIA</span>
           </button>
         </div>
         <button class="tbtn tbtn--interact" id="touch-interact" data-action="interact" aria-label="Interagisci">

@@ -3,14 +3,14 @@ import { CHAPTERS, LEVELS } from '../../src/world/LevelManager';
 import { LEVEL_COUNT, LEVEL_IDS } from '../../src/systems/levelIds';
 
 describe('level catalog', () => {
-  it('has nine levels whose ids match the save system', () => {
-    expect(LEVEL_COUNT).toBe(9);
+  it('has twelve levels whose ids match the save system', () => {
+    expect(LEVEL_COUNT).toBe(12);
     expect(LEVELS.length).toBe(LEVEL_COUNT);
     expect(LEVELS.map((level) => level.id)).toEqual([...LEVEL_IDS]);
   });
 
   it('numbers the levels in order and gives each one its own name', () => {
-    expect(LEVELS.map((level) => level.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(LEVELS.map((level) => level.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     const names = new Set(LEVELS.map((level) => level.name));
     expect(names.size).toBe(LEVELS.length);
     for (const level of LEVELS) {
@@ -20,10 +20,13 @@ describe('level catalog', () => {
     }
   });
 
-  it('groups the campaign into three chapters of three levels', () => {
+  it('groups the campaign into three chapters of four levels', () => {
     expect(CHAPTERS).toHaveLength(3);
     for (const [index, level] of LEVELS.entries()) {
-      expect(level.chapter).toBe(Math.floor(index / 3) + 1);
+      expect(level.chapter).toBe(Math.floor(index / 4) + 1);
+    }
+    for (const chapter of CHAPTERS) {
+      expect(LEVELS.filter((level) => level.chapter === chapter.number)).toHaveLength(4);
     }
   });
 

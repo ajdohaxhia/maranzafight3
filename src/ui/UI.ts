@@ -3,8 +3,6 @@ import type { SaveManager } from '../systems/SaveManager';
 import type { Settings } from '../systems/SettingsManager';
 import { CHAPTERS, LEVELS } from '../world/LevelManager';
 import { HUD, type HudModel } from './HUD';
-import type { ZombieSave, ZombiesRunMode } from '../zombies/ZombieSave';
-import type { ZombiesResult } from '../zombies/ZombiesMode';
 import type { ModeSave } from '../systems/ModeSave';
 import { CHALLENGES, MODES, type ModeId } from '../systems/GameModes';
 
@@ -20,8 +18,6 @@ export type ScreenKey =
   | 'levelComplete'
   | 'gameOver'
   | 'victory'
-  | 'zombies'
-  | 'zombiesResult'
   | 'modeResult';
 
 export interface UICallbacks {
@@ -38,10 +34,6 @@ export interface UICallbacks {
   onRetry(): void;
   onMenu(): void;
   onNewGamePlus(): void;
-  onZombies(mode: ZombiesRunMode): void;
-  onZombiesResume(): void;
-  onZombiesRetry(): void;
-  onZombiesMenu(): void;
   onMode(mode: ModeId): void;
   onChallenge(id: string): void;
   onModeRetry(): void;
@@ -88,8 +80,6 @@ const SCREEN_IDS: Record<ScreenKey, string> = {
   levelComplete: 'screen-level-complete',
   gameOver: 'screen-gameover',
   victory: 'screen-victory',
-  zombies: 'screen-zombies',
-  zombiesResult: 'screen-zombies-result',
   modeResult: 'screen-mode-result',
 };
 
@@ -116,10 +106,7 @@ export class UI {
   readonly hud = new HUD();
   private readonly callbacks: UICallbacks;
   private readonly save: SaveManager;
-  private readonly zombieSave: ZombieSave | null;
   private readonly modeSave: ModeSave | null;
-  private zombiesNewPending = false;
-  private zombiesNewTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly screens = new Map<ScreenKey, HTMLElement>();
   private currentScreen: ScreenKey | null = 'boot';
   private panelOrigin: ScreenKey = 'menu';
@@ -131,10 +118,9 @@ export class UI {
   private wipeTimer: ReturnType<typeof setTimeout> | null = null;
   private installDeferred: (() => void) | null = null;
 
-  constructor(save: SaveManager, callbacks: UICallbacks, zombieSave: ZombieSave | null = null, modeSave: ModeSave | null = null) {
+  constructor(save: SaveManager, callbacks: UICallbacks, modeSave: ModeSave | null = null) {
     this.save = save;
     this.callbacks = callbacks;
-    this.zombieSave = zombieSave;
     this.modeSave = modeSave;
     for (const [key, id] of Object.entries(SCREEN_IDS) as Array<[ScreenKey, string]>) {
       const element = byId(id);
@@ -145,7 +131,6 @@ export class UI {
     this.bindPanels();
     this.bindSettings();
     this.bindResults();
-    this.bindZombies();
     this.bindModes();
     this.bindSystem();
     this.createDamagePool();
@@ -272,80 +257,6 @@ export class UI {
     this.activate(null);
     this.hud.setVisible(true);
     document.body.classList.add('is-playing');
-  }
-
-  enterZombies(): void {
-    this.activate(null);
-    this.hud.setVisible(false);
-    document.body.classList.add('is-playing');
-    document.body.classList.add('is-zombies');
-  }
-
-  showZombies(): void {
-    this.refreshZombies();
-    this.activate('zombies');
-    this.hud.setVisible(false);
-    document.body.classList.remove('is-playing');
-    document.body.classList.remove('is-zombies');
-  }
-
-  refreshZombies(): void {
-    const records = this.zombieSave?.records;
-    const active = this.zombieSave?.active ?? null;
-    this.setText('z-best-round', String(records?.bestRound ?? 0));
-    this.setText('z-best-kills', String(records?.bestKills ?? 0));
-    this.setText('z-extractions', String(records?.extractions ?? 0));
-    this.setText('z-runs', String(records?.runs ?? 0));
-    const resume = byId<HTMLElement>('z-btn-resume');
-    if (resume) resume.toggleAttribute('hidden', !active);
-    const label = byId<HTMLElement>('z-resume-label');
-    if (label) {
-      label.textContent = active
-        ? `ROUND ${active.nextRound} · ${active.mode === 'extraction' ? 'ESTRAZIONE' : 'INFINITA'} · ${active.points} PUNTI`
-        : '';
-    }
-    const note = byId<HTMLElement>('z-new-note');
-    if (note) {
-      note.textContent = active
-        ? 'Una run è in pausa: riprendila o scarta il checkpoint per iniziarne una nuova.'
-        : 'Nessuna run in pausa. Il checkpoint viene salvato tra un round e l’altro.';
-    }
-    this.resetZombiesConfirm();
-  }
-
-  showZombiesResult(result: ZombiesResult, victory: boolean): void {
-    this.hud.setVisible(false);
-    document.body.classList.remove('is-playing');
-    document.body.classList.remove('is-zombies');
-    this.activate('zombiesResult');
-    this.setText('zr-kicker', victory ? 'ESTRAZIONE COMPLETATA' : 'RUN TERMINATA');
-    this.setText('zr-title', victory ? 'FUORI DA MILANO' : 'NOTTE MORTA');
-    this.setText('zr-reason', result.reason);
-    this.setText('zr-round', String(result.round));
-    this.setText('zr-kills', String(result.kills));
-    this.setText('zr-headshots', String(result.headshots));
-    this.setText('zr-points', pad(result.points, 5));
-    this.setText('zr-time', formatTime(result.time));
-    this.setText('zr-best', result.newRecord ? `NUOVO RECORD: ROUND ${result.round}` : `RECORD: ROUND ${result.bestRound}`);
-    const retry = byId<HTMLElement>('btn-zr-retry');
-    if (retry) retry.textContent = victory ? 'NUOVA RUN' : 'RIPROVA';
-  }
-
-  /** Rewrites only the label span so a button keeps its index/sub markup. */
-  private setZombieButtonLabel(button: HTMLElement, text: string): void {
-    const label = button.querySelector<HTMLElement>('.btn__label');
-    if (label) label.textContent = text;
-    else button.textContent = text;
-  }
-
-  private resetZombiesConfirm(): void {
-    this.zombiesNewPending = false;
-    if (this.zombiesNewTimer) clearTimeout(this.zombiesNewTimer);
-    this.zombiesNewTimer = null;
-    for (const button of document.querySelectorAll<HTMLElement>('[data-zmode]')) {
-      const mode = button.dataset.zmode === 'extraction' ? 'ESTRAZIONE' : 'INFINITA';
-      this.setZombieButtonLabel(button, mode);
-    }
   }
 
   showPause(): void {
@@ -544,7 +455,6 @@ export class UI {
     this.on('btn-play', () => this.callbacks.onNewGame());
     this.on('btn-continue', () => this.callbacks.onContinue(this.save.nextLevelIndex() + 1));
     this.on('btn-levels', () => this.showLevels());
-    this.on('btn-zombies', () => this.showZombies());
     this.on('btn-modes', () => this.showModes());
     this.on('btn-help', () => this.openPanel('help'));
     this.on('btn-settings', () => this.openPanel('settings'));
@@ -644,28 +554,6 @@ export class UI {
     this.on('btn-go-menu', () => this.callbacks.onMenu());
     this.on('btn-victory-menu', () => this.callbacks.onMenu());
     this.on('btn-newgame-plus', () => this.callbacks.onNewGamePlus());
-  }
-
-  private bindZombies(): void {
-    this.on('z-btn-resume', () => this.callbacks.onZombiesResume());
-    this.on('btn-zr-retry', () => this.callbacks.onZombiesRetry());
-    this.on('btn-zr-menu', () => this.callbacks.onZombiesMenu());
-    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-zmode]')) {
-      const mode = button.dataset.zmode === 'extraction' ? 'extraction' : 'infinite';
-      button.addEventListener('click', () => {
-        this.callbacks.onUiSound();
-        const hasActive = Boolean(this.zombieSave?.active);
-        if (hasActive && !this.zombiesNewPending) {
-          this.zombiesNewPending = true;
-          this.setZombieButtonLabel(button, 'SCARTA CHECKPOINT E GIOCA?');
-          if (this.zombiesNewTimer) clearTimeout(this.zombiesNewTimer);
-          this.zombiesNewTimer = setTimeout(() => this.resetZombiesConfirm(), 4000);
-          return;
-        }
-        this.resetZombiesConfirm();
-        this.callbacks.onZombies(mode);
-      });
-    }
   }
 
   /** Builds the nine level cards once; refreshLevels() only updates their state. */

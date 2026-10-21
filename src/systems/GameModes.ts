@@ -4,6 +4,9 @@ import type { WaveDefinition } from './WaveManager';
 
 export type ModeId = 'campaign' | 'survival' | 'bossRush' | 'training' | 'challenge' | 'remix';
 
+/** Survival and Boss Rush play in the Duomo; resolve by id so adding levels cannot move it. */
+const DUOMO_INDEX = Math.max(0, LEVELS.findIndex((level) => level.id === 'duomo'));
+
 export type ModifierId = 'tecnica' | 'pressione' | 'essenziale' | 'precisione';
 
 export const MODIFIER_LABELS: Record<ModifierId, string> = {
@@ -239,7 +242,7 @@ export function modeRules(mode: ModeId, challengeId = 'tecnica', seedInput?: str
       label: 'SOPRAVVIVENZA',
       recordKey: 'survival',
       seed: 'SURVIVAL-20',
-      levelIndex: 3,
+      levelIndex: DUOMO_INDEX,
       records: true,
       waves: survivalWaves(20),
     };
@@ -251,7 +254,7 @@ export function modeRules(mode: ModeId, challengeId = 'tecnica', seedInput?: str
       label: 'BOSS RUSH',
       recordKey: 'boss-rush',
       seed: 'BOSS-RUSH',
-      levelIndex: 3,
+      levelIndex: DUOMO_INDEX,
       records: true,
       bossRush: [...BOSS_RUSH_ORDER],
     };

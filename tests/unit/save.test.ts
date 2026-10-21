@@ -142,9 +142,9 @@ describe('SaveManager', () => {
     expect(save.get().completed).toBe(false);
     save.recordLevelComplete('metro', 6000, 1);
     save.recordLevelComplete('navigli', 9000, 1);
-    // Chapter one and the Duomo are done: continue at Porta Venezia.
-    expect(save.unlockedCount).toBe(5);
-    expect(save.nextLevelIndex()).toBe(4);
+    // Duomo is cleared but Brera is not, so the campaign continues in Brera.
+    expect(save.unlockedCount).toBe(4);
+    expect(save.nextLevelIndex()).toBe(3);
   });
 
   it('completes the campaign only when every level is cleared', () => {

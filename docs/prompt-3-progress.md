@@ -22,10 +22,9 @@ Aggiornato: 2026-10-21 · base: commit `bb9299a` (v1.2.0, main)
   avere default validi per via della sanificazione.
 
 ### Modalità esistenti
-- Campagna (rigiocabile per livello) più **Notte morta a Milano** (Zombies), modalità survival
-  separata con due regole (Infinita, Estrazione), documentata in [zombies-mode.md](zombies-mode.md).
-  Survival e Boss Rush della campagna non esistono: i prompt 1–2 non li hanno mai impostati
-  (`grep` su `survival|boss rush` in src/ = 0 risultati). Il prompt 3 non li chiede.
+- Campagna rigiocabile per livello. All'epoca nessuna modalità survival separata; Survival e
+  Boss Rush della campagna sono stati aggiunti dopo il prompt 3 (stato aggiornato in
+  [expansion-progress.md](expansion-progress.md)).
 - `debugJumpToLevel(n)` esiste come hook Playwright e va riutilizzato per l'accesso rapido
   ai livelli nel test dell'e2e; `debugSpawnEnemy` è già usato per il boss.
 

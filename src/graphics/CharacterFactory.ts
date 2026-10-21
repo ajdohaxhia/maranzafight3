@@ -15,7 +15,7 @@ export const JOINT_NAMES = [
 ] as const;
 
 export type JointName = (typeof JOINT_NAMES)[number];
-export type CharacterLook = 'player' | 'base' | 'puffer' | 'turbo' | 'boss' | 'zombie';
+export type CharacterLook = 'player' | 'base' | 'puffer' | 'turbo' | 'boss';
 
 export interface CharacterVisual {
   /** World transform: position at feet, rotation = facing yaw. */
@@ -153,57 +153,6 @@ const TURBO_OUTFITS: Outfit[] = [
     sole: '#e7e3d8',
     bag: '#232330',
     metal: '#d8b73d',
-  },
-];
-
-const ZOMBIE_OUTFITS: Outfit[] = [
-  {
-    skin: '#9aa78a',
-    hair: '#23251f',
-    primary: '#3d4c42',
-    secondary: '#26251f',
-    accent: '#7a2a24',
-    pants: '#2a2b2d',
-    shoes: '#262624',
-    sole: '#4b4a42',
-    bag: '#1c1b18',
-    metal: '#6f6a58',
-  },
-  {
-    skin: '#8e9b8f',
-    hair: '#191a18',
-    primary: '#4a3b3b',
-    secondary: '#2f2c28',
-    accent: '#9c7a2e',
-    pants: '#33322f',
-    shoes: '#1d1c1a',
-    sole: '#57534a',
-    bag: '#1b1a17',
-    metal: '#5f5b4c',
-  },
-  {
-    skin: '#a8a88f',
-    hair: '#2b241f',
-    primary: '#38424f',
-    secondary: '#232830',
-    accent: '#5e7a3a',
-    pants: '#252a31',
-    shoes: '#20211f',
-    sole: '#4a4a44',
-    bag: '#181a1d',
-    metal: '#6a6656',
-  },
-  {
-    skin: '#94a08c',
-    hair: '#1f211d',
-    primary: '#5a4a3a',
-    secondary: '#2a2723',
-    accent: '#8a3a2a',
-    pants: '#2d2f31',
-    shoes: '#232322',
-    sole: '#504d45',
-    bag: '#1d1c19',
-    metal: '#5d594d',
   },
 ];
 
@@ -391,9 +340,7 @@ export class CharacterFactory {
         ? PLAYER_OUTFIT
         : look === 'boss'
           ? pick(BOSS_OUTFITS, variant)
-          : look === 'zombie'
-            ? pick(ZOMBIE_OUTFITS, variant)
-            : look === 'puffer'
+          : look === 'puffer'
               ? pick(PUFFER_OUTFITS, variant)
               : look === 'turbo'
                 ? pick(TURBO_OUTFITS, variant)
@@ -481,13 +428,6 @@ export class CharacterFactory {
         this.add(torso, this.boxGeo(), secondaryMat, { scale: [0.036, 0.16, 0.022], pos: [0.18, 0.24, 0.235] });
         this.add(torso, this.boxGeo(), secondaryMat, { scale: [0.036, 0.16, 0.022], pos: [-0.18, 0.24, 0.235] });
       }
-      if (look === 'zombie') {
-        // Torn hem and exposed shirt: the silhouette reads as "not a maranza".
-        const tearMat = this.mat(materials, outfit.secondary, { roughness: 0.95 });
-        this.add(torso, this.boxGeo(), tearMat, { scale: [0.2, 0.09, 0.02], pos: [0, -0.005, 0.236], rot: [0, 0, 0.22] });
-        this.add(torso, this.boxGeo(), tearMat, { scale: [0.13, 0.07, 0.02], pos: [0.12, 0.08, 0.232], rot: [0, 0, -0.35] });
-        this.add(torso, this.boxGeo(), accentMat, { scale: [0.07, 0.2, 0.018], pos: [-0.17, 0.18, 0.24], rot: [0, 0, 0.18] });
-      }
       if (look === 'player') {
         const scarfMat = this.mat(materials, '#c92727', { roughness: 0.85 });
         this.add(torso, this.torusGeo(), scarfMat, {
@@ -499,8 +439,8 @@ export class CharacterFactory {
       }
     }
 
-    // Chest bag / borsello for everyone but the player and the undead.
-    if (look !== 'player' && look !== 'zombie') {
+    // Chest bag / borsello for everyone but the player.
+    if (look !== 'player') {
       const bagSize: [number, number, number] =
         look === 'boss' ? [0.32, 0.24, 0.12] : look === 'puffer' ? [0.26, 0.18, 0.1] : [0.23, 0.16, 0.085];
       const bagX = look === 'boss' ? 0.18 : 0.21;
@@ -567,16 +507,7 @@ export class CharacterFactory {
     this.add(head, this.boxGeo(), hairMat, { scale: [0.05, 0.014, 0.015], pos: [0.05, 0.142, 0.113], rot: [0, 0, -0.16] });
     this.add(head, this.boxGeo(), hairMat, { scale: [0.05, 0.014, 0.015], pos: [-0.05, 0.142, 0.113], rot: [0, 0, 0.16] });
     // Occhi leggermente incassati nella socket.
-    if (look === 'zombie') {
-      const socketMat = this.mat(materials, '#2a2b22', { roughness: 0.9 });
-      const glowMat = this.mat(materials, '#ffd35a', { emissive: '#ffae1f', emissiveIntensity: 1.1, roughness: 0.3 });
-      this.add(head, this.sphereGeo(), socketMat, { scale: [0.05, 0.032, 0.02], pos: [0.05, 0.106, 0.119] });
-      this.add(head, this.sphereGeo(), socketMat, { scale: [0.05, 0.032, 0.02], pos: [-0.05, 0.106, 0.119] });
-      this.add(head, this.sphereGeo(), glowMat, { scale: [0.016, 0.016, 0.012], pos: [0.05, 0.108, 0.128] });
-      this.add(head, this.sphereGeo(), glowMat, { scale: [0.016, 0.016, 0.012], pos: [-0.05, 0.108, 0.128] });
-      // Uneven, gaping jaw.
-      this.add(head, this.boxGeo(), darkMat, { scale: [0.055, 0.026, 0.012], pos: [0, 0.026, 0.126], rot: [0, 0, 0.08] });
-    } else if (look === 'player') {
+    if (look === 'player') {
       this.eye(head, 0.052, 0.112, 0.108, whiteMat, darkMat);
       this.eye(head, -0.052, 0.112, 0.108, whiteMat, darkMat);
     } else {
@@ -610,14 +541,6 @@ export class CharacterFactory {
       // Backwards cap.
       this.add(head, this.domeGeo(), accentMat, { scale: [0.14, 0.12, 0.14], pos: [0, 0.14, -0.006] });
       this.add(head, this.boxGeo(), accentMat, { scale: [0.19, 0.02, 0.13], pos: [0, 0.11, -0.15], rot: [0.18, 0, 0] });
-    } else if (look === 'zombie') {
-      // Sparse patches of hair and a scab, nothing groomed.
-      this.add(head, this.lowSphereGeo(), hairMat, { scale: [0.09, 0.03, 0.08], pos: [0.03, 0.2, 0.02] });
-      this.add(head, this.lowSphereGeo(), hairMat, { scale: [0.06, 0.025, 0.05], pos: [-0.06, 0.18, -0.05] });
-      this.add(head, this.sphereGeo(), this.mat(materials, '#6e3a34', { roughness: 1 }), {
-        scale: [0.03, 0.018, 0.02],
-        pos: [0.08, 0.06, 0.1],
-      });
     } else if (look === 'boss') {
       const bossVariant = Math.abs(variant) % BOSS_OUTFITS.length;
       this.add(head, this.domeGeo(), hairMat, { scale: [0.136, 0.12, 0.14], pos: [0, 0.13, -0.01] });
@@ -724,7 +647,7 @@ export class CharacterFactory {
       }
     }
 
-    if (look !== 'player' && look !== 'puffer' && look !== 'zombie') {
+    if (look !== 'player' && look !== 'puffer') {
       // Tracksuit stripes down the sleeves.
       this.add(armL, this.boxGeo(), accentMat, { scale: [0.018, 0.22, 0.018], pos: [-0.085, -0.14, 0.045] });
       this.add(armR, this.boxGeo(), accentMat, { scale: [0.018, 0.22, 0.018], pos: [0.085, -0.14, 0.045] });
