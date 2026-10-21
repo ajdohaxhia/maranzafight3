@@ -826,6 +826,11 @@ export class Game {
   }
 
   private updateEnemyTelegraphs(dt: number): void {
+    let telegraphCount = 0;
+    let nearestThreatX = 0;
+    let nearestThreatZ = 0;
+    let nearestThreatDist = Infinity;
+    const player = this.player;
     for (const enemy of this.enemies) {
       if (!enemy.alive) {
         this.effects.clearTelegraph(enemy.id);
@@ -839,7 +844,7 @@ export class Game {
       const spec = attack.spec;
       if (attack.time < spec.windup) {
         const radius = spec.telegraphRadius ?? spec.aoeRadius ?? Math.max(1.2, spec.range);
-        this.effects.setTelegraph(enemy.id, enemy.pos, radius, 0.08);
+        this.effects.setTelegraph(enemy.id, enemy.pos, radius, 0.08, spec.telegraphColor);
       } else {
         this.effects.clearTelegraph(enemy.id);
       }
@@ -847,6 +852,23 @@ export class Game {
       if (last !== attack.serial) {
         this.lastEnemyAttacks.set(enemy.id, attack.serial);
         this.audio.playSfx('dodge');
+        // Boss attacks get their brand announced; generic enemies stay silent
+        // besides the telegraph ring and audio cue.
+        if (enemy.archetype.kind === 'boss') {
+          this.ui.toast(spec.label, spec.brandLabel ?? 'IL RE DEL BORSELLO', 1100);
+        }
+      }
+      // Track winding-up attacks for the pre-emptive dodge rule (>=3 threats).
+      if (attack.time < spec.windup) {
+        telegraphCount += 1;
+        if (player) {
+          const d = Math.hypot(enemy.posX - player.posX, enemy.posZ - player.posZ);
+          if (d < nearestThreatDist) {
+            nearestThreatDist = d;
+            nearestThreatX = enemy.posX;
+            nearestThreatZ = enemy.posZ;
+          }
+        }
       }
       if (spec.aoe) {
         const activeStart = spec.windup;
@@ -857,6 +879,7 @@ export class Game {
         }
       }
     }
+    if (player) player.setThreat(telegraphCount, nearestThreatX, nearestThreatZ);
   }
 
   private updatePickups(dt: number): void {
@@ -1022,6 +1045,7 @@ export class Game {
     if (this.state !== 'playing') return;
     this.state = 'paused';
     this.loop.setPaused(true);
+    this.input.clearTransient();
     this.input.setEnabled(false);
     this.audio.setPaused(true);
     this.ui.showPause();

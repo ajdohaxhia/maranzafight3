@@ -46,6 +46,7 @@ export const BOSS_BAG: AttackSpec = {
   hitstop: 0.1,
   heavy: true,
   telegraphRadius: 3.4,
+  telegraphColor: '#b04dff',
 };
 
 export const BOSS_SLAM: AttackSpec = {
@@ -65,6 +66,7 @@ export const BOSS_SLAM: AttackSpec = {
   aoe: true,
   aoeRadius: 3.9,
   telegraphRadius: 3.9,
+  telegraphColor: '#5500ff',
 };
 
 export const BOSS_CHARGE: AttackSpec = {
@@ -82,6 +84,7 @@ export const BOSS_CHARGE: AttackSpec = {
   hitstop: 0.09,
   heavy: true,
   telegraphRadius: 2.2,
+  telegraphColor: '#0077ff',
 };
 
 export class Boss extends Enemy {

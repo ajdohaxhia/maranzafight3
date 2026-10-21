@@ -265,7 +265,7 @@ export class Effects {
     slot.sprite.visible = true;
   }
 
-  setTelegraph(id: number, position: THREE.Vector3, radius: number, duration: number): void {
+  setTelegraph(id: number, position: THREE.Vector3, radius: number, duration: number, color?: string): void {
     let entry = this.telegraphs.get(id);
     if (!entry) {
       if (this.telegraphs.size >= MAX_TELEGRAPHS) return;
@@ -277,6 +277,7 @@ export class Effects {
       entry = { mesh, until: 0, radius };
       this.telegraphs.set(id, entry);
     }
+    if (color) (entry.mesh.material as THREE.MeshBasicMaterial).color.set(color);
     entry.until = this.now + duration;
     entry.radius = radius;
     entry.mesh.position.set(position.x, 0.045, position.z);

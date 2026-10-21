@@ -16,7 +16,8 @@ export interface AttackSpec {
   hitstun: number;
   hitstop: number;
   heavy: boolean;
-  /** Radius attack: hits everyone around the attacker on the first active frame. */
+  /** Fighter-facing name announced on HUD when the attack starts (defaults to label). */
+  brandLabel?: string;
   aoe?: boolean;
   aoeRadius?: number;
   energyGain?: number;
@@ -24,6 +25,8 @@ export interface AttackSpec {
   unblockable?: boolean;
   /** Visual telegraph radius; defaults to range. */
   telegraphRadius?: number;
+  /** Telegraph ring color for threat-tier color coding. */
+  telegraphColor?: string;
 }
 
 export interface ActiveAttack {
@@ -80,7 +83,7 @@ export const PLAYER_PUNCH_1: AttackSpec = {
   hitstop: 0.045,
   heavy: false,
   energyGain: 6,
-};
+}
 
 export const PLAYER_PUNCH_2: AttackSpec = {
   id: 'punch2',

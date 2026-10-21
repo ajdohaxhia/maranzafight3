@@ -46,6 +46,9 @@ export class Player extends Fighter {
   private aimZ: number | null = null;
   private movingSpeed = 0;
   private hurtAnimPending = false;
+  private telegraphCount = 0;
+  private threatX = 0;
+  private threatZ = 0;
 
   constructor(
     physics: Physics,
@@ -97,6 +100,16 @@ export class Player extends Fighter {
     this.aimZ = z;
   }
 
+  /**
+   * updated each frame by Game.updateEnemyTelegraphs: number of enemies currently
+   * winding-up an announced attack and the nearest threat center.
+   */
+  setThreat(count: number, fromX: number, fromZ: number): void {
+    this.telegraphCount = count;
+    this.threatX = fromX;
+    this.threatZ = fromZ;
+  }
+
   setControlLocked(locked: boolean): void {
     this.controlLocked = locked;
     if (locked) {
@@ -126,8 +139,9 @@ export class Player extends Fighter {
       this.queue('kick');
       return false;
     }
+    const chained = this.chainTimer > 0 && this.chainIndex === 2;
     this.chainIndex = 0;
-    this.chainTimer = 0;
+    this.chainTimer = chained ? attackTotal(PLAYER_KICK) + 0.7 : 0;
     return this.startAttack(PLAYER_KICK);
   }
 
@@ -247,6 +261,32 @@ export class Player extends Fighter {
     }
     this.lastMoveX = moveX;
     this.lastMoveZ = moveZ;
+
+    // Anticipated rule: with three or more simultaneous winding-up attacks,
+    // the player pre-dodges (if cooldown is ready) in the direction away from
+    // the nearest threat, keeping the input control.
+    if (
+      this.telegraphCount >= 3 &&
+      this.alive &&
+      !this.controlLocked &&
+      !this.victory &&
+      this.hurtTimer <= 0 &&
+      this.dodgeTimer <= 0 &&
+      this.dodgeCooldown <= 0 &&
+      !this.attack
+    ) {
+      const dx = this.posX - this.threatX;
+      const dz = this.posZ - this.threatZ;
+      const mag = Math.hypot(dx, dz);
+      if (mag > 0.2) {
+        this.lastMoveX = dx / mag;
+        this.lastMoveZ = dz / mag;
+      } else {
+        this.lastMoveX = -this.forwardX;
+        this.lastMoveZ = -this.forwardZ;
+      }
+      this.tryDodge();
+    }
 
     if (this.hurtTimer > 0) {
       this.anim.play('hurt', { duration: 0.38 });

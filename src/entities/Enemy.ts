@@ -23,6 +23,14 @@ export type EnemyState =
 
 export type EnemyKind = 'base' | 'puffer' | 'turbo' | 'boss';
 
+/** Threat-tier telegraph colors: heavier/faster attacks get hotter colors. */
+export const TELEGRAPH_COLORS: Record<EnemyKind, string> = {
+  base: '#ffd400',
+  turbo: '#ff2f2f',
+  puffer: '#ff8a3d',
+  boss: '#b04dff',
+};
+
 export interface EnemyArchetype {
   kind: EnemyKind;
   label: string;
@@ -404,7 +412,9 @@ export class Enemy extends Fighter {
       hitstun: a.hitstun,
       hitstop: 0.055,
       heavy: a.kind === 'puffer',
+      brandLabel: a.label,
       telegraphRadius: a.range,
+      telegraphColor: TELEGRAPH_COLORS[a.kind],
     };
   }
 
