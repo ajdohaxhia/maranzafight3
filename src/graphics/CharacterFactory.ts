@@ -207,18 +207,81 @@ const ZOMBIE_OUTFITS: Outfit[] = [
   },
 ];
 
-const BOSS_OUTFIT: Outfit = {
-  skin: '#b37a4f',
-  hair: '#16110d',
-  primary: '#f0e8d6',
-  secondary: '#191512',
-  accent: '#b31515',
-  pants: '#20201f',
-  shoes: '#111111',
-  sole: '#e9c14a',
-  bag: '#17120e',
-  metal: '#ffcf3d',
-};
+/** Indexed by BossProfile.variant: borsello, tetti, buttafuori, trainer, dj, consiglio. */
+const BOSS_OUTFITS: Outfit[] = [
+  {
+    skin: '#b37a4f',
+    hair: '#16110d',
+    primary: '#f0e8d6',
+    secondary: '#191512',
+    accent: '#b31515',
+    pants: '#20201f',
+    shoes: '#111111',
+    sole: '#e9c14a',
+    bag: '#17120e',
+    metal: '#ffcf3d',
+  },
+  {
+    skin: '#8f6444',
+    hair: '#120f0c',
+    primary: '#2b2140',
+    secondary: '#15121c',
+    accent: '#8a5cff',
+    pants: '#191722',
+    shoes: '#0e0d12',
+    sole: '#b99b4a',
+    bag: '#141019',
+    metal: '#ffd76a',
+  },
+  {
+    skin: '#a97850',
+    hair: '#1b1510',
+    primary: '#1d1e22',
+    secondary: '#101114',
+    accent: '#c92323',
+    pants: '#17181c',
+    shoes: '#0d0d0f',
+    sole: '#3c3c3c',
+    bag: '#121214',
+    metal: '#cfd4da',
+  },
+  {
+    skin: '#c28a5d',
+    hair: '#241a12',
+    primary: '#1f5a4a',
+    secondary: '#12251f',
+    accent: '#9dff4a',
+    pants: '#1a2320',
+    shoes: '#e4e4e0',
+    sole: '#7a7a72',
+    bag: '#15201b',
+    metal: '#f0e8d6',
+  },
+  {
+    skin: '#b07a52',
+    hair: '#171310',
+    primary: '#23202e',
+    secondary: '#131118',
+    accent: '#4fe6ff',
+    pants: '#1c1a24',
+    shoes: '#101014',
+    sole: '#ff3ea5',
+    bag: '#181420',
+    metal: '#ffd400',
+  },
+  {
+    skin: '#a06c48',
+    hair: '#141110',
+    primary: '#26262c',
+    secondary: '#15151a',
+    accent: '#c9a227',
+    pants: '#1d1d22',
+    shoes: '#0f0f12',
+    sole: '#8a7424',
+    bag: '#141419',
+    metal: '#ffd35a',
+  },
+];
 
 function pick<T>(list: T[], variant: number): T {
   return list[Math.abs(variant) % list.length] as T;
@@ -327,7 +390,7 @@ export class CharacterFactory {
       look === 'player'
         ? PLAYER_OUTFIT
         : look === 'boss'
-          ? BOSS_OUTFIT
+          ? pick(BOSS_OUTFITS, variant)
           : look === 'zombie'
             ? pick(ZOMBIE_OUTFITS, variant)
             : look === 'puffer'
@@ -461,8 +524,8 @@ export class CharacterFactory {
         pos: [0.02, 0.26, 0.245],
         rot: [0.04, 0, 0.47],
       });
-      if (look === 'boss') {
-        // Giant gold chain and medallion.
+      if (look === 'boss' && (variant % BOSS_OUTFITS.length === 0 || variant % BOSS_OUTFITS.length === 1 || variant % BOSS_OUTFITS.length === 5)) {
+        // The kings and the council wear the gold chain and medallion.
         this.add(torso, this.torusGeo(), metalMat, {
           scale: [0.19, 0.19, 0.14],
           pos: [0, 0.47, 0.02],
@@ -556,20 +619,52 @@ export class CharacterFactory {
         pos: [0.08, 0.06, 0.1],
       });
     } else if (look === 'boss') {
-      // Slick hair + gold cap + crown spikes.
+      const bossVariant = Math.abs(variant) % BOSS_OUTFITS.length;
       this.add(head, this.domeGeo(), hairMat, { scale: [0.136, 0.12, 0.14], pos: [0, 0.13, -0.01] });
-      this.add(head, this.domeGeo(), secondaryMat, { scale: [0.142, 0.115, 0.142], pos: [0, 0.145, -0.005] });
-      this.add(head, this.boxGeo(), secondaryMat, { scale: [0.2, 0.022, 0.12], pos: [0, 0.12, 0.14] });
-      for (let i = 0; i < 5; i++) {
-        this.add(head, this.coneGeo(), metalMat, {
-          scale: [0.026, 0.09 + (i % 2) * 0.03, 0.026],
-          pos: [-0.08 + i * 0.04, 0.255, 0.02],
-          rot: [0, 0, 0],
+      if (bossVariant === 0 || bossVariant === 1) {
+        // The two kings: slick hair, gold cap, crown spikes, beard.
+        this.add(head, this.domeGeo(), secondaryMat, { scale: [0.142, 0.115, 0.142], pos: [0, 0.145, -0.005] });
+        this.add(head, this.boxGeo(), secondaryMat, { scale: [0.2, 0.022, 0.12], pos: [0, 0.12, 0.14] });
+        for (let i = 0; i < 5; i++) {
+          this.add(head, this.coneGeo(), metalMat, {
+            scale: [0.026, 0.09 + (i % 2) * 0.03, 0.026],
+            pos: [-0.08 + i * 0.04, 0.255, 0.02],
+            rot: [0, 0, 0],
+          });
+        }
+        this.add(head, this.sphereGeo(), hairMat, { scale: [0.108, 0.07, 0.06], pos: [0, -0.005, 0.075] });
+        this.add(head, this.boxGeo(), metalMat, { scale: [0.016, 0.014, 0.01], pos: [0.02, 0.038, 0.132] });
+      } else if (bossVariant === 2) {
+        // Buttafuori: shaved head, sunglasses and coiled earpiece.
+        this.add(head, this.lowSphereGeo(), hairMat, { scale: [0.13, 0.035, 0.13], pos: [0, 0.2, 0] });
+        this.add(head, this.boxGeo(), this.mat(materials, '#0b0b0d', { roughness: 0.4 }), {
+          scale: [0.19, 0.042, 0.03],
+          pos: [0, 0.078, 0.12],
+          rot: [0, 0, 0.03],
         });
+        const coil = this.geom('boss-earpiece', () => new THREE.TorusGeometry(1, 0.18, 6, 14, Math.PI * 1.6));
+        this.add(head, coil, metalMat, { scale: [0.03, 0.03, 0.03], pos: [0.128, 0.05, 0], rot: [0, Math.PI / 2, 0] });
+      } else if (bossVariant === 3) {
+        // Personal trainer: sweatband and whistle.
+        this.add(head, this.domeGeo(), accentMat, { scale: [0.139, 0.045, 0.141], pos: [0, 0.175, -0.004] });
+        this.add(head, this.torusGeo(), metalMat, { scale: [0.032, 0.032, 0.016], pos: [0.02, -0.1, 0.075], rot: [0, 0, 0] });
+      } else if (bossVariant === 4) {
+        // DJ: headphones over the ears plus a visor.
+        const pad = this.geom('boss-headphone', () => new THREE.CylinderGeometry(1, 1, 0.35, 10));
+        this.add(head, pad, secondaryMat, { scale: [0.05, 0.05, 0.05], pos: [0.145, 0.06, 0], rot: [0, 0, Math.PI / 2] });
+        this.add(head, pad, secondaryMat, { scale: [0.05, 0.05, 0.05], pos: [-0.145, 0.06, 0], rot: [0, 0, Math.PI / 2] });
+        this.add(head, this.torusGeo(), secondaryMat, { scale: [0.145, 0.13, 0.02], pos: [0, 0.1, -0.02], rot: [0, 0, 0] });
+        this.add(head, this.boxGeo(), accentMat, { scale: [0.17, 0.03, 0.02], pos: [0, 0.08, 0.132] });
+      } else {
+        // Consiglio: slicked hair, gold-rimmed glasses and a tie pin.
+        this.add(head, this.domeGeo(), secondaryMat, { scale: [0.142, 0.11, 0.142], pos: [0, 0.15, -0.005] });
+        const rimMat = metalMat;
+        for (const x of [-0.062, 0.062]) {
+          this.add(head, this.torusGeo(), rimMat, { scale: [0.045, 0.032, 0.012], pos: [x, 0.09, 0.126], rot: [0, 0, 0] });
+        }
+        this.add(head, this.boxGeo(), rimMat, { scale: [0.05, 0.008, 0.008], pos: [0, 0.09, 0.13] });
+        this.add(head, this.sphereGeo(), hairMat, { scale: [0.1, 0.05, 0.05], pos: [0, -0.005, 0.08] });
       }
-      // Beard + gold tooth grin.
-      this.add(head, this.sphereGeo(), hairMat, { scale: [0.108, 0.07, 0.06], pos: [0, -0.005, 0.075] });
-      this.add(head, this.boxGeo(), metalMat, { scale: [0.016, 0.014, 0.01], pos: [0.02, 0.038, 0.132] });
     } else {
       this.add(head, this.domeGeo(), hairMat, { scale: [0.132, 0.095, 0.134], pos: [0, 0.13, -0.005] });
       if (look === 'player') {

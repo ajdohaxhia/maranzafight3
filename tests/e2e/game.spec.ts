@@ -45,6 +45,20 @@ declare global {
       jumpToLevel(level: number): void;
       hurtPlayer(amount?: number): void;
       showMenu(): void;
+      startMode(mode: 'survival' | 'bossRush' | 'training' | 'challenge' | 'remix', challengeId?: string): void;
+      modeInfo(): {
+        mode: string;
+        label: string;
+        seed: string;
+        recordKey: string;
+        modifiers: string[];
+        playerMaxHp: number;
+        playerDamage: number;
+        enemySpeed: number;
+        score: number;
+        levelIndex: number;
+        training: boolean;
+      };
       startZombies(mode?: 'infinite' | 'extraction'): void;
       zombiesSpawn(kind?: string): void;
       zombiesAim(x: number, z: number): void;
@@ -244,6 +258,102 @@ test.describe('MARANZA FIGHT 3', () => {
     expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
   });
 
+  test('modalità: sopravvivenza parte in Duomo con venti round', async ({ page }) => {
+    await boot(page);
+    await page.locator('#btn-modes').click();
+    await expect(page.locator('#screen-modes')).toHaveClass(/is-active/);
+    await expect(page.locator('.mode-card')).toHaveCount(4);
+    await expect(page.locator('.challenge-card')).toHaveCount(3);
+    await expect(page.locator('#challenge-list')).toContainText('TECNICA-01');
+    await page.locator('[data-mode="survival"]').click();
+    await page.waitForFunction(() => window.__MARANZA__.snapshot.state === 'playing');
+    const snap = await snapshot(page);
+    expect(snap.hudVisible).toBe(true);
+    expect(await page.locator('#hud-level').textContent()).toBe('SOPRAVVIVENZA');
+    await expect(page.locator('#hud-wave')).toContainText('/ 20');
+    const info = await page.evaluate(() => window.__MARANZA__.modeInfo());
+    expect(info.mode).toBe('survival');
+    expect(info.recordKey).toBe('survival');
+    expect(info.seed).toBe('SURVIVAL-20');
+  });
+
+  test('boss rush: il primo boss entra e la fila è di sei', async ({ page }) => {
+    await boot(page);
+    await page.evaluate(() => window.__MARANZA__.startMode('bossRush'));
+    await page.waitForFunction(() => window.__MARANZA__.snapshot.state === 'playing', undefined, { timeout: 20_000 });
+    await page.waitForFunction(() => window.__MARANZA__.snapshot.bossActive, undefined, { timeout: 30_000 });
+    const snap = await snapshot(page);
+    expect(snap.state).toBe('playing');
+    await expect(page.locator('#hud-level')).toHaveText('BOSS RUSH');
+    await expect(page.locator('#hud-wave')).toContainText('/ 6');
+    await expect(page.locator('#boss-hud')).toHaveClass(/is-active/);
+    expect(await page.evaluate(() => window.__MARANZA__.modeInfo().mode)).toBe('bossRush');
+  });
+
+  test('allenamento: il manichino incassa i colpi e non fa record', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Il colpo da mouse non è disponibile in emulazione mobile');
+    await boot(page);
+    await page.evaluate(() => window.__MARANZA__.startMode('training'));
+    await expect.poll(async () => (await snapshot(page)).enemies.length, { timeout: 15_000 }).toBe(1);
+    await expect(page.locator('#hud-level')).toHaveText('ALLENAMENTO');
+    await expect(page.locator('#hud-wave')).toContainText('1 / 1');
+    const before = (await snapshot(page)).enemies[0]!;
+    await page.evaluate(({ x, z }) => {
+      window.__MARANZA__.teleport(x, z - 1.6);
+      window.__MARANZA__.face(0);
+    }, before);
+    await page.waitForTimeout(200);
+    await page.evaluate(() => {
+      const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+      canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
+    });
+    await expect
+      .poll(async () => (await snapshot(page)).enemies[0]?.hp ?? before.hp, { timeout: 6_000 })
+      .toBeLessThan(before.hp);
+    expect((await snapshot(page)).enemies[0]?.alive).toBe(true);
+    const info = await page.evaluate(() => window.__MARANZA__.modeInfo());
+    expect(info.training).toBe(true);
+    expect(info.mode).toBe('training');
+  });
+
+  test('sfide: essenziale riduce la salute e alza la resistenza nemica', async ({ page }) => {
+    await boot(page);
+    await page.evaluate(() => window.__MARANZA__.startMode('challenge', 'essenziale'));
+    await page.waitForFunction(() => window.__MARANZA__.snapshot.state === 'playing');
+    const info = await page.evaluate(() => window.__MARANZA__.modeInfo());
+    expect(info.mode).toBe('challenge');
+    expect(info.seed).toBe('ESSENZIALE-03');
+    expect(info.modifiers).toEqual(['essenziale', 'precisione']);
+    expect(info.playerMaxHp).toBe(80);
+    expect(info.playerDamage).toBeGreaterThan(1);
+    expect((await snapshot(page)).hp).toBe(80);
+    await expect(page.locator('#hud-level')).toContainText('ESSENZIALE');
+  });
+
+  test('remix: il seed compare in HUD e nel risultato', async ({ page }) => {
+    await boot(page);
+    await page.evaluate(() => window.__MARANZA__.startMode('remix'));
+    await expect.poll(async () => (await snapshot(page)).state, { timeout: 15_000 }).toBe('playing');
+    const info = await page.evaluate(() => window.__MARANZA__.modeInfo());
+    expect(info.mode).toBe('remix');
+    expect(info.seed).toMatch(/^REMIX-/);
+    await expect(page.locator('#hud-level')).toContainText(info.seed);
+    await expect
+      .poll(
+        async () => {
+          await page.evaluate(() => window.__MARANZA__.hurtPlayer(999));
+          return (await snapshot(page)).playerAlive;
+        },
+        { timeout: 20_000, intervals: [600] },
+      )
+      .toBe(false);
+    await expect(page.locator('#screen-mode-result')).toHaveClass(/is-active/, { timeout: 15_000 });
+    await expect(page.locator('#mr-title')).toHaveText('REMIX');
+    await expect(page.locator('#mr-seed')).toHaveText(info.seed);
+    await expect(page.locator('#mr-kicker')).toHaveText('RUN TERMINATA');
+  });
+
   test('la selezione livelli mostra nove piazze in tre capitoli', async ({ page }) => {
     await boot(page);
     await page.locator('#btn-levels').click();
@@ -350,6 +460,28 @@ test.describe('mobile touch', () => {
     await page.waitForTimeout(250);
     const yawAfter = (await snapshot(page)).cameraYaw;
     expect(Math.abs(yawAfter - yawBefore)).toBeGreaterThan(0.02);
+  });
+
+  test('modalità: le card stanno nel viewport e la run parte', async ({ page }) => {
+    await boot(page);
+    await page.locator('#btn-modes').tap();
+    await expect(page.locator('#screen-modes')).toHaveClass(/is-active/);
+    const layout = await page.evaluate(() => {
+      const screen = document.getElementById('screen-modes')!;
+      const cards = [...document.querySelectorAll<HTMLElement>('.mode-card')];
+      return {
+        scrollable: screen.scrollHeight >= screen.clientHeight,
+        horizontalOverflow: screen.scrollWidth > screen.clientWidth + 1,
+        widths: cards.map((card) => card.getBoundingClientRect().width),
+        visible: cards.every((card) => card.getBoundingClientRect().width > 0),
+      };
+    });
+    expect(layout.visible).toBe(true);
+    expect(layout.horizontalOverflow).toBe(false);
+    expect(Math.min(...layout.widths)).toBeGreaterThan(240);
+    await page.locator('[data-mode="survival"]').tap();
+    await page.waitForFunction(() => window.__MARANZA__.snapshot.state === 'playing');
+    expect(await page.locator('#hud-level').textContent()).toBe('SOPRAVVIVENZA');
   });
 
   test('zombies: HUD libero dallo stick e fuoco touch', async ({ page }) => {

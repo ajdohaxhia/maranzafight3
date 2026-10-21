@@ -5,11 +5,14 @@ import { CHAPTERS, LEVELS } from '../world/LevelManager';
 import { HUD, type HudModel } from './HUD';
 import type { ZombieSave, ZombiesRunMode } from '../zombies/ZombieSave';
 import type { ZombiesResult } from '../zombies/ZombiesMode';
+import type { ModeSave } from '../systems/ModeSave';
+import { CHALLENGES, MODES, type ModeId } from '../systems/GameModes';
 
 export type ScreenKey =
   | 'boot'
   | 'menu'
   | 'levels'
+  | 'modes'
   | 'help'
   | 'settings'
   | 'credits'
@@ -18,7 +21,8 @@ export type ScreenKey =
   | 'gameOver'
   | 'victory'
   | 'zombies'
-  | 'zombiesResult';
+  | 'zombiesResult'
+  | 'modeResult';
 
 export interface UICallbacks {
   onNewGame(): void;
@@ -38,6 +42,11 @@ export interface UICallbacks {
   onZombiesResume(): void;
   onZombiesRetry(): void;
   onZombiesMenu(): void;
+  onMode(mode: ModeId): void;
+  onChallenge(id: string): void;
+  onModeRetry(): void;
+  onModeModes(): void;
+  onModeMenu(): void;
   onInstall(): void;
   onUiSound(): void;
 }
@@ -54,10 +63,24 @@ export interface LevelResult {
   newBest: boolean;
 }
 
+export interface ModeResultView {
+  label: string;
+  seed: string;
+  score: number;
+  bestCombo: number;
+  kos: number;
+  timeSeconds: number;
+  victory: boolean;
+  newBest: boolean;
+  bestScore: number;
+  note: string;
+}
+
 const SCREEN_IDS: Record<ScreenKey, string> = {
   boot: 'screen-boot',
   menu: 'screen-menu',
   levels: 'screen-levels',
+  modes: 'screen-modes',
   help: 'screen-help',
   settings: 'screen-settings',
   credits: 'screen-credits',
@@ -67,6 +90,7 @@ const SCREEN_IDS: Record<ScreenKey, string> = {
   victory: 'screen-victory',
   zombies: 'screen-zombies',
   zombiesResult: 'screen-zombies-result',
+  modeResult: 'screen-mode-result',
 };
 
 const byId = <T extends HTMLElement>(id: string): T | null => document.getElementById(id) as T | null;
@@ -93,6 +117,7 @@ export class UI {
   private readonly callbacks: UICallbacks;
   private readonly save: SaveManager;
   private readonly zombieSave: ZombieSave | null;
+  private readonly modeSave: ModeSave | null;
   private zombiesNewPending = false;
   private zombiesNewTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly screens = new Map<ScreenKey, HTMLElement>();
@@ -106,10 +131,11 @@ export class UI {
   private wipeTimer: ReturnType<typeof setTimeout> | null = null;
   private installDeferred: (() => void) | null = null;
 
-  constructor(save: SaveManager, callbacks: UICallbacks, zombieSave: ZombieSave | null = null) {
+  constructor(save: SaveManager, callbacks: UICallbacks, zombieSave: ZombieSave | null = null, modeSave: ModeSave | null = null) {
     this.save = save;
     this.callbacks = callbacks;
     this.zombieSave = zombieSave;
+    this.modeSave = modeSave;
     for (const [key, id] of Object.entries(SCREEN_IDS) as Array<[ScreenKey, string]>) {
       const element = byId(id);
       if (element) this.screens.set(key, element);
@@ -120,6 +146,7 @@ export class UI {
     this.bindSettings();
     this.bindResults();
     this.bindZombies();
+    this.bindModes();
     this.bindSystem();
     this.createDamagePool();
     this.syncSettingsUI(save.getSettings());
@@ -178,6 +205,67 @@ export class UI {
     this.activate('levels');
     this.hud.setVisible(false);
     document.body.classList.remove('is-playing');
+  }
+
+  showModes(): void {
+    this.refreshModes();
+    this.activate('modes');
+    this.hud.setVisible(false);
+    document.body.classList.remove('is-playing');
+  }
+
+  refreshModes(): void {
+    if (!this.modeSave) return;
+    let runs = 0;
+    let best = 0;
+    for (const mode of MODES) {
+      const recordKey = mode.id === 'bossRush' ? 'boss-rush' : mode.id;
+      const record = this.modeSave.get(recordKey);
+      runs += record.runs;
+      best = Math.max(best, record.bestScore);
+      const slot = document.querySelector<HTMLElement>(`[data-best="${recordKey}"]`);
+      if (slot) {
+        slot.textContent = mode.id === 'training'
+          ? 'SEMPRE APERTO'
+          : record.bestScore > 0
+            ? `RECORD ${pad(record.bestScore, 5)} · ${record.runs} RUN`
+            : 'RECORD 00000';
+      }
+    }
+    for (const challenge of CHALLENGES) {
+      const record = this.modeSave.get(`challenge-${challenge.id}`);
+      runs += record.runs;
+      const slot = document.querySelector<HTMLElement>(`[data-challenge-best="${challenge.id}"]`);
+      if (slot) {
+        slot.textContent = record.bestScore > 0 ? `RECORD ${pad(record.bestScore, 5)}` : 'MAI GIOCATA';
+      }
+    }
+    this.setText(
+      'modes-record-line',
+      runs === 0 ? 'NESSUN RECORD SALVATO' : `${runs} RUN · MIGLIOR PUNTEGGIO ${pad(best, 6)}`,
+    );
+  }
+
+  showModeResult(result: ModeResultView): void {
+    this.hud.setVisible(false);
+    document.body.classList.remove('is-playing');
+    this.activate('modeResult');
+    this.setText('mr-kicker', result.victory ? 'RUN COMPLETATA' : 'RUN TERMINATA');
+    this.setText('mr-title', result.label);
+    this.setText('mr-reason', result.note);
+    this.setText('mr-score', pad(result.score, 6));
+    this.setText('mr-combo', `x${result.bestCombo}`);
+    this.setText('mr-kos', String(result.kos));
+    this.setText('mr-time', formatTime(result.timeSeconds));
+    this.setText('mr-seed', result.seed || '—');
+    this.setText(
+      'mr-best',
+      result.newBest
+        ? `NUOVO RECORD: ${pad(result.bestScore, 6)}`
+        : result.bestScore > 0
+          ? `RECORD: ${pad(result.bestScore, 6)}`
+          : 'NESSUN RECORD SALVATO PER QUESTA MODALITÀ',
+    );
   }
 
   enterGame(): void {
@@ -373,6 +461,28 @@ export class UI {
     this.toastTimer = setTimeout(() => toast.classList.remove('is-active'), duration);
   }
 
+  /** Fills the cinematic intro with the boss that is about to walk in. */
+  setBossIntro(name: string, kicker: string, quote: string): void {
+    const root = byId<HTMLElement>('boss-intro');
+    if (!root) return;
+    const kickerEl = root.querySelector<HTMLElement>('.boss-intro__kicker');
+    const nameEl = root.querySelector<HTMLElement>('.boss-intro__name');
+    const quoteEl = root.querySelector<HTMLElement>('.boss-intro__quote');
+    if (kickerEl) kickerEl.textContent = kicker;
+    if (quoteEl) quoteEl.textContent = quote;
+    if (!nameEl) return;
+    const words = name.split(' ').filter(Boolean);
+    const mid = Math.ceil(words.length / 2);
+    nameEl.textContent = '';
+    nameEl.append(words.slice(0, mid).join(' '));
+    if (words.length > mid) {
+      nameEl.append(document.createElement('br'));
+      const span = document.createElement('span');
+      span.textContent = words.slice(mid).join(' ');
+      nameEl.append(span);
+    }
+  }
+
   bossIntro(show: boolean): void {
     byId<HTMLElement>('boss-intro')?.classList.toggle('is-active', show);
   }
@@ -435,6 +545,7 @@ export class UI {
     this.on('btn-continue', () => this.callbacks.onContinue(this.save.nextLevelIndex() + 1));
     this.on('btn-levels', () => this.showLevels());
     this.on('btn-zombies', () => this.showZombies());
+    this.on('btn-modes', () => this.showModes());
     this.on('btn-help', () => this.openPanel('help'));
     this.on('btn-settings', () => this.openPanel('settings'));
     this.on('btn-credits', () => this.openPanel('credits'));
@@ -631,6 +742,41 @@ export class UI {
     }
     const menuProgress = byId<HTMLElement>('menu-progress');
     if (menuProgress) menuProgress.textContent = `${this.save.unlockedCount} / ${LEVELS.length}`;
+  }
+
+  /** Mode cards and challenge buttons are built once, like the level grid. */
+  private bindModes(): void {
+    for (const button of document.querySelectorAll<HTMLElement>('[data-mode]')) {
+      button.addEventListener('click', () => {
+        this.callbacks.onUiSound();
+        const mode = button.dataset.mode as ModeId | undefined;
+        if (mode) this.callbacks.onMode(mode);
+      });
+    }
+    const list = byId<HTMLElement>('challenge-list');
+    if (list) {
+      list.innerHTML = '';
+      for (const challenge of CHALLENGES) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'challenge-card';
+        button.dataset.challenge = challenge.id;
+        button.innerHTML = `
+          <span class="challenge-card__name">${challenge.name}</span>
+          <span class="challenge-card__tag">${challenge.tag}</span>
+          <span class="challenge-card__seed">SEED ${challenge.seed} · ${challenge.modifiers.join(' + ').toUpperCase()}</span>
+          <span class="challenge-card__best" data-challenge-best="${challenge.id}">MAI GIOCATA</span>
+        `;
+        button.addEventListener('click', () => {
+          this.callbacks.onUiSound();
+          this.callbacks.onChallenge(challenge.id);
+        });
+        list.appendChild(button);
+      }
+    }
+    this.on('btn-mr-retry', () => this.callbacks.onModeRetry());
+    this.on('btn-mr-modes', () => this.callbacks.onModeModes());
+    this.on('btn-mr-menu', () => this.callbacks.onModeMenu());
   }
 
   private bindSystem(): void {

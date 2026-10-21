@@ -114,6 +114,9 @@ async function main(): Promise<void> {
       face: (yaw: number) => game.debugSetPlayerYaw(yaw),
       showMenu: () => game.returnToMenuPublic(),
       captureLevel: (level: number) => game.captureLevel(level),
+      startMode: (mode: 'survival' | 'bossRush' | 'training' | 'challenge' | 'remix', challengeId?: string) =>
+        game.debugStartMode(mode, challengeId),
+      modeInfo: () => game.debugModeInfo(),
       startZombies: (mode: 'infinite' | 'extraction' = 'infinite') => game.debugStartZombies(mode),
       zombiesStartRound: (round: number) => game.debugStartZombiesRound(round),
       zombiesClear: () => game.debugZombiesClear(),

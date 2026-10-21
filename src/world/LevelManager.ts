@@ -4,6 +4,7 @@ import type { Quality } from '../systems/SettingsManager';
 import type { WaveDefinition } from '../systems/WaveManager';
 import type { MusicTrack } from '../audio/AudioManager';
 import type { LevelId } from '../systems/levelIds';
+import type { BossId } from '../entities/Boss';
 import {
   buildDarsena,
   buildDuomo,
@@ -45,6 +46,7 @@ export interface LevelConfig {
   /** True when the level ends with a boss fight instead of a normal clear. */
   boss: boolean;
   bossName?: string;
+  bossId?: BossId;
   hpScale: number;
   damageScale: number;
   maxAttackers: number;
@@ -214,6 +216,7 @@ export const LEVELS: LevelConfig[] = [
     bossMusic: 'boss',
     boss: true,
     bossName: 'IL RE DEL BORSELLO',
+    bossId: 'borsello',
     hpScale: 1.32,
     damageScale: 1.15,
     maxAttackers: 2,
@@ -253,8 +256,10 @@ export const LEVELS: LevelConfig[] = [
     shortName: 'PORTA VENEZIA',
     subtitle: 'CORSO BUENOS AIRES · ORE 2:10',
     music: 'level3',
-    bossMusic: 'level3',
-    boss: false,
+    bossMusic: 'boss',
+    boss: true,
+    bossName: 'IL BUTTAFUORI',
+    bossId: 'buttafuori',
     hpScale: 1.4,
     damageScale: 1.2,
     maxAttackers: 3,
@@ -297,6 +302,11 @@ export const LEVELS: LevelConfig[] = [
           { kind: 'base', count: 2, interval: 0.85 },
         ],
       },
+      {
+        label: 'IL BUTTAFUORI',
+        maxAlive: 1,
+        spawns: [{ kind: 'boss', count: 1, interval: 0 }],
+      },
     ],
   },
   {
@@ -307,8 +317,10 @@ export const LEVELS: LevelConfig[] = [
     shortName: 'SEMPIONE',
     subtitle: 'VERSO IL CASTELLO · ORE 2:40',
     music: 'level4',
-    bossMusic: 'level4',
-    boss: false,
+    bossMusic: 'boss',
+    boss: true,
+    bossName: 'IL PERSONAL TRAINER',
+    bossId: 'trainer',
     hpScale: 1.48,
     damageScale: 1.24,
     maxAttackers: 3,
@@ -350,6 +362,11 @@ export const LEVELS: LevelConfig[] = [
           { kind: 'base', count: 3, interval: 0.8 },
         ],
       },
+      {
+        label: 'IL PERSONAL TRAINER',
+        maxAlive: 1,
+        spawns: [{ kind: 'boss', count: 1, interval: 0 }],
+      },
     ],
   },
   {
@@ -360,8 +377,10 @@ export const LEVELS: LevelConfig[] = [
     shortName: 'ISOLA',
     subtitle: 'CANTIERE DELLE TORRI · ORE 3:20',
     music: 'level4',
-    bossMusic: 'level4',
-    boss: false,
+    bossMusic: 'boss',
+    boss: true,
+    bossName: 'IL CONSIGLIO DEL BORSELLO',
+    bossId: 'consiglio',
     hpScale: 1.56,
     damageScale: 1.28,
     maxAttackers: 3,
@@ -404,6 +423,11 @@ export const LEVELS: LevelConfig[] = [
           { kind: 'base', count: 2, interval: 0.78 },
         ],
       },
+      {
+        label: 'IL CONSIGLIO DEL BORSELLO',
+        maxAlive: 1,
+        spawns: [{ kind: 'boss', count: 1, interval: 0 }],
+      },
     ],
   },
   {
@@ -414,8 +438,10 @@ export const LEVELS: LevelConfig[] = [
     shortName: 'DARSENA',
     subtitle: 'NAVIGLIO GRANDE · ORE 3:50',
     music: 'level3',
-    bossMusic: 'level3',
-    boss: false,
+    bossMusic: 'boss',
+    boss: true,
+    bossName: 'IL DJ',
+    bossId: 'dj',
     hpScale: 1.64,
     damageScale: 1.32,
     maxAttackers: 3,
@@ -458,6 +484,11 @@ export const LEVELS: LevelConfig[] = [
           { kind: 'base', count: 3, interval: 0.76 },
         ],
       },
+      {
+        label: 'IL DJ',
+        maxAlive: 1,
+        spawns: [{ kind: 'boss', count: 1, interval: 0 }],
+      },
     ],
   },
   {
@@ -471,6 +502,7 @@ export const LEVELS: LevelConfig[] = [
     bossMusic: 'boss',
     boss: true,
     bossName: 'IL RE DEI TETTI',
+    bossId: 'tetti',
     hpScale: 1.75,
     damageScale: 1.38,
     maxAttackers: 3,

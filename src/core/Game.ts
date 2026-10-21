@@ -17,12 +17,14 @@ import { ComboTracker, scoreForHit } from '../combat/ComboSystem';
 import { PLAYER_KICK, type AttackSpec, type Combatant, type HitInfo } from '../combat/types';
 import { Player } from '../entities/Player';
 import { Enemy, ENEMY_ARCHETYPES, type EnemyContext, type EnemyKind } from '../entities/Enemy';
-import { Boss } from '../entities/Boss';
+import { Boss, bossProfile, type BossId } from '../entities/Boss';
 import { Pickup } from '../entities/Pickup';
 import { WaveManager, type SpawnRequest } from '../systems/WaveManager';
 import { AttackDirector } from '../ai/AttackDirector';
 import { ZombiesMode, type ZombiesResult } from '../zombies/ZombiesMode';
 import { ZombieSave, type ZombiesRunMode } from '../zombies/ZombieSave';
+import { ModeSave } from '../systems/ModeSave';
+import { campaignRulesFor, createRng, modeRules, type ModeId, type RunRules } from '../systems/GameModes';
 
 type GameState = 'boot' | 'menu' | 'playing' | 'paused' | 'results';
 
@@ -36,6 +38,7 @@ export class Game {
   private readonly audio: AudioManager;
   private readonly save: SaveManager;
   private readonly zombieSave = ZombieSave.create();
+  private readonly modeSave = ModeSave.create();
   private readonly ui: UI;
   private readonly factory = new CharacterFactory();
   private readonly effects: Effects;
@@ -83,6 +86,12 @@ export class Game {
   private lastEnemyAttacks = new Map<number, number>();
   private zombies: ZombiesMode | null = null;
   private lastZombiesMode: ZombiesRunMode = 'infinite';
+  private rules: RunRules = campaignRulesFor();
+  private lastChallengeId = 'tecnica';
+  private modeResultShown = false;
+  private bossRushIndex = 0;
+  private bossRushDelay = -1;
+  private rng: () => number = Math.random;
   private readonly unsubscribers: Array<() => void> = [];
   private readonly cameraTarget = new THREE.Vector3();
   private readonly debugInfo = { started: false };
@@ -125,9 +134,14 @@ export class Game {
       onZombiesResume: () => this.startZombies(this.zombieSave.active?.mode ?? 'infinite', true),
       onZombiesRetry: () => this.startZombies(this.lastZombiesMode, false),
       onZombiesMenu: () => this.returnToMenu(),
+      onMode: (mode) => this.startMode(mode),
+      onChallenge: (id) => this.startMode('challenge', id),
+      onModeRetry: () => this.retryLevel(),
+      onModeModes: () => this.backToModes(),
+      onModeMenu: () => this.returnToMenu(),
       onInstall: () => undefined,
       onUiSound: () => this.audio.playSfx('ui'),
-    }, this.zombieSave);
+    }, this.zombieSave, this.modeSave);
     this.applySettings(settings);
     this.loop = new GameLoop(
       {
@@ -144,19 +158,22 @@ export class Game {
   async start(): Promise<void> {
     this.ui.setBoot(0.36, 'CARICO GLI ATTORI', 'Modelli low-poly e rig procedurali');
     await this.nextFrame();
-    this.loadMenuScene();
+    // Build the title scene without revealing the menu yet: the boot screen must
+    // stay up until every piece (state, audio, loop) is ready. Showing it early
+    // let a very fast input start a mode and then be overwritten by start().
+    this.loadMenuScene(false);
     this.ui.setBoot(0.78, 'SCALDO IL BORSELLO', 'Fisica WebAssembly pronta');
     await this.nextFrame();
     this.ui.setBoot(0.94, 'ACCENDO LE LUCI', 'Milano non dorme mai');
     await this.nextFrame();
     this.ui.hideBoot();
-    this.ui.showMenu();
-    this.ui.refreshMenu(this.continueLabel());
     this.state = 'menu';
     this.menuMode = true;
     this.audio.startMusic('menu');
     this.loop.start();
     this.debugInfo.started = true;
+    this.ui.showMenu();
+    this.ui.refreshMenu(this.continueLabel());
   }
 
   private nextFrame(): Promise<void> {
@@ -169,8 +186,10 @@ export class Game {
   }
 
   // ── Scenes ──────────────────────────────────────────────────────────
-  private loadMenuScene(): void {
+  private loadMenuScene(showScreen = true): void {
     this.cleanupActors();
+    this.bossActive = false;
+    this.bossIntroActive = false;
     this.effects.clear();
     this.combo.reset();
     this.cameraRig.aimLook = 0;
@@ -186,6 +205,7 @@ export class Game {
     this.levels.load(0);
     this.config = config;
     this.levelIndex = 0;
+    this.rules = campaignRulesFor();
     this.director = new AttackDirector(1);
     this.ui.setControlsActive(false);
 
@@ -229,9 +249,11 @@ export class Game {
 
     this.menuMode = true;
     this.state = 'menu';
-    this.ui.showMenu();
-    this.ui.refreshMenu(this.continueLabel());
-    this.audio.startMusic('menu', true);
+    if (showScreen) {
+      this.ui.showMenu();
+      this.ui.refreshMenu(this.continueLabel());
+      this.audio.startMusic('menu', true);
+    }
     this.loop.setPaused(false);
   }
 
@@ -253,9 +275,54 @@ export class Game {
     // (or New Game+) always restarts from the station.
     const requested = continueRun || level > 1 ? level - 1 : 0;
     const startIndex = Math.min(LEVELS.length - 1, Math.max(0, requested));
+    this.rules = campaignRulesFor();
     this.startLevel(startIndex, 0);
     this.ui.refreshMenu(this.continueLabel());
     this.requestPointerLock();
+  }
+
+  // ── Extra modes ─────────────────────────────────────────────────────
+  private startMode(mode: ModeId, challengeId?: string): void {
+    this.audio.unlock();
+    if (this.zombies) {
+      this.zombies.dispose();
+      this.zombies = null;
+      this.input.setShooterMode(false);
+    }
+    if (challengeId) this.lastChallengeId = challengeId;
+    this.score = 0;
+    this.bestCombo = 0;
+    this.totalKos = 0;
+    this.runClock = 0;
+    this.levelStartScore = 0;
+    this.levelKos = 0;
+    this.levelBestCombo = 0;
+    const rules = modeRules(mode, this.lastChallengeId);
+    this.startLevel(rules.levelIndex, 0, rules);
+    this.requestPointerLock();
+  }
+
+  private restartMode(): void {
+    const previous = this.rules;
+    this.score = 0;
+    this.bestCombo = 0;
+    this.totalKos = 0;
+    this.runClock = 0;
+    this.levelStartScore = 0;
+    this.levelKos = 0;
+    this.levelBestCombo = 0;
+    const rules = modeRules(
+      previous.mode === 'campaign' ? 'survival' : previous.mode,
+      this.lastChallengeId,
+      previous.mode === 'remix' ? previous.seed : undefined,
+    );
+    this.startLevel(rules.levelIndex, 0, rules);
+    this.requestPointerLock();
+  }
+
+  private backToModes(): void {
+    this.returnToMenu();
+    this.ui.showModes();
   }
 
   // ── Zombies ─────────────────────────────────────────────────────────
@@ -321,8 +388,13 @@ export class Game {
     this.ui.showZombiesResult(result, victory);
   }
 
-  private startLevel(index: number, baseScore?: number): void {
+  private startLevel(index: number, baseScore?: number, rules: RunRules = campaignRulesFor()): void {
     this.audio.unlock();
+    this.rules = rules;
+    this.rng = rules.mode === 'campaign' ? Math.random : createRng(rules.seed);
+    this.modeResultShown = false;
+    this.bossRushIndex = 0;
+    this.bossRushDelay = rules.bossRush ? 1.1 : -1;
     this.cleanupActors();
     this.effects.clear();
     this.combo.reset();
@@ -338,7 +410,7 @@ export class Game {
     this.levels.setQuality(this.save.getSettings().quality);
     const built = this.levels.load(this.levelIndex);
     this.director = new AttackDirector(this.config.maxAttackers);
-    this.waves = new WaveManager(this.config.waves);
+    this.waves = rules.waves ? new WaveManager(rules.waves) : rules.bossRush || rules.training ? null : new WaveManager(this.config.waves);
     this.score = baseScore ?? this.score;
     this.levelStartScore = this.score;
     this.levelKos = 0;
@@ -361,7 +433,15 @@ export class Game {
 
     const spawn = built.arena.playerStart.clone();
     const startYaw = built.arena.startYaw ?? 0;
-    this.player = new Player(this.physics, this.factory, this.combat, this.playerEvents(), spawn);
+    this.player = new Player(
+      this.physics,
+      this.factory,
+      this.combat,
+      this.playerEvents(),
+      spawn,
+      rules.effects.playerMaxHp,
+    );
+    this.player.damageMultiplier = rules.effects.playerDamage;
     this.player.setYaw(startYaw + Math.PI);
     this.player.addToScene(this.renderer.scene);
     this.player.setControlLocked(false);
@@ -382,11 +462,46 @@ export class Game {
     this.loop.setPaused(false);
     this.audio.setPaused(false);
     this.audio.startMusic(this.config.music, true);
-    this.ui.toast(`LIVELLO ${this.config.number}`, this.config.name, 2400);
+    if (rules.mode === 'campaign') {
+      this.ui.toast(`LIVELLO ${this.config.number}`, this.config.name, 2400);
+    } else if (rules.mode === 'remix') {
+      this.ui.toast(rules.seed, rules.label, 2600);
+    } else {
+      this.ui.toast(rules.label, rules.mode === 'training' ? 'COLPI LIBERI, NESSUN RECORD' : this.config.name, 2400);
+    }
     this.ui.refreshMenu(this.continueLabel());
     this.requestPointerLock();
     // Short grace period before the player can be hit.
     this.player.invulnTimer = 1.2;
+    if (rules.mode === 'training') this.spawnTrainingDummy();
+    if (rules.mode === 'survival') this.ui.toast('SOPRAVVIVENZA', '20 ROUND · BOSS OGNI 5', 2000);
+  }
+
+  private spawnTrainingDummy(): void {
+    const player = this.player;
+    if (!player) return;
+    const arena = this.levels.current?.arena;
+    const spawn = player.pos.clone().add(new THREE.Vector3(player.forwardX * 3, 0, player.forwardZ * 3));
+    if (arena) {
+      spawn.x = THREE.MathUtils.clamp(spawn.x, arena.bounds.minX + 2, arena.bounds.maxX - 2);
+      spawn.z = THREE.MathUtils.clamp(spawn.z, arena.bounds.minZ + 2, arena.bounds.maxZ - 2);
+    }
+    const dummy = new Enemy(
+      this.physics,
+      this.factory,
+      this.combat,
+      this.director,
+      ENEMY_ARCHETYPES.base,
+      new THREE.Vector3(spawn.x, 0, spawn.z),
+      { hp: 2500, damage: 0.35 },
+      2,
+    );
+    dummy.isDebug = true;
+    dummy.speedMultiplier = 0;
+    dummy.setYaw(Math.atan2(player.posX - spawn.x, player.posZ - spawn.z));
+    dummy.addToScene(this.renderer.scene);
+    dummy.attackCooldown = 9999;
+    this.enemies.push(dummy);
   }
 
   private cleanupActors(): void {
@@ -489,7 +604,7 @@ export class Game {
       const multiplier = this.combo.registerHit();
       this.levelBestCombo = Math.max(this.levelBestCombo, this.combo.count);
       this.bestCombo = Math.max(this.bestCombo, this.combo.count);
-      this.score += scoreForHit(info.damage, multiplier, false);
+      this.addScore(scoreForHit(info.damage, multiplier, false));
       this.player?.addEnergy(spec.energyGain ?? 6);
       this.ui.spawnDamage(
         new THREE.Vector3(target.posX, 1.65, target.posZ),
@@ -519,7 +634,7 @@ export class Game {
   private handlePerfectDodge(attacker: Combatant, target: Combatant): void {
     if (target !== this.player) return;
     this.player.onPerfectDodge();
-    this.score += 150;
+    this.addScore(150);
     void attacker;
   }
 
@@ -539,12 +654,17 @@ export class Game {
     this.audio.playSfx('ko');
   }
 
+  /** Mode modifiers can scale every positive score source (campaign is x1). */
+  private addScore(amount: number): void {
+    this.score += Math.round(amount * this.rules.effects.scoreMultiplier);
+  }
+
   private kosAward(enemy: Enemy): void {
     this.levelKos += 1;
     this.totalKos += 1;
     const base = enemy.archetype.score;
     const bonus = Math.round(200 * this.combo.count * 0.1);
-    this.score += base + bonus;
+    this.addScore(base + bonus);
   }
 
   private maybeDropPickup(enemy: Enemy): void {
@@ -560,11 +680,43 @@ export class Game {
 
   private handleBossDeath(): void {
     if (this.victoryDelay >= 0 || this.boss === null) return;
-    this.victoryDelay = 3.4;
+    const defeated = this.boss;
+    this.addScore(defeated.profile.score);
     this.slowmo = 0.85;
-    this.bossActive = true;
     this.ui.flash('boss');
-    this.score += 6000;
+    this.effects.spawnRing(defeated.pos, '#ffd400', 9, 1.2);
+    this.effects.spawnRing(defeated.pos, '#ff2f2f', 5.5, 0.9, 0.15);
+    this.cameraRig.addShake(0.7);
+    this.audio.playSfx('ko');
+
+    if (this.rules.mode === 'bossRush') {
+      this.bossActive = false;
+      this.boss = null;
+      this.audio.stopMusic();
+      this.bossRushIndex += 1;
+      const queue = this.rules.bossRush ?? [];
+      if (this.bossRushIndex >= queue.length) {
+        this.victoryDelay = 2.4;
+        this.ui.toast('BOSS RUSH COMPLETATA', 'SEI BOSS, ZERO PAUSE', 2600);
+      } else {
+        this.bossRushDelay = 2.6;
+        this.ui.toast('BOSS SUCCESSIVO', `${this.bossRushIndex} / ${queue.length}`, 1800);
+      }
+      return;
+    }
+
+    if (this.rules.mode === 'survival') {
+      // Survival bosses are just another round: release the wave flow.
+      this.bossActive = false;
+      this.boss = null;
+      this.audio.startMusic(this.config.music, true);
+      this.ui.toast('BOSS ABBATTUTO', 'MA LE ONDATE CONTINUANO', 2200);
+      this.combo.reset();
+      return;
+    }
+
+    this.victoryDelay = 3.4;
+    this.bossActive = true;
     this.audio.stopMusic();
     this.audio.playSfx('ko');
     this.cameraRig.setMode('orbit', {
@@ -577,9 +729,6 @@ export class Game {
     this.player?.setControlLocked(true);
     this.ui.setControlsActive(false);
     this.ui.toast(this.config.bossName ?? 'IL RE È CADUTO', this.levelIndex >= LEVELS.length - 1 ? 'MILANO È SALVA (PIÙ O MENO)' : 'MA LA NOTTE NON È FINITA', 2600);
-    this.effects.spawnRing(this.boss.pos, '#ffd400', 9, 1.2);
-    this.effects.spawnRing(this.boss.pos, '#ff2f2f', 5.5, 0.9, 0.15);
-    this.cameraRig.addShake(0.7);
   }
 
   private handleBossPhase(phase: number): void {
@@ -591,22 +740,28 @@ export class Game {
     this.hitstop = Math.max(this.hitstop, 0.1);
     this.effects.spawnRing(this.boss.pos, '#ff2f2f', 7.5, 0.8);
     this.effects.spawnSparks(this.boss.pos, '#ff5a4a', 24, 1.6);
-    this.ui.toast(`FASE ${phase === 2 ? 'II' : 'III'}`, phase === 2 ? 'IL RE SI INCAZZA' : 'TUTTO O NIENTE', 1500);
+    this.ui.toast(this.boss.phaseLabel, phase === 2 ? 'IL BOSS SI INCAZZA' : 'TUTTO O NIENTE', 1500);
   }
 
   // ── Boss spawn / intro ──────────────────────────────────────────────
-  private spawnBoss(): void {
+  private spawnBoss(bossId: BossId = this.config.bossId ?? 'borsello'): void {
     if (this.boss) return;
     const arena = this.levels.current?.arena;
     const spawn = arena?.bossSpawn.clone() ?? new THREE.Vector3(0, 0, -6);
+    const profile = bossProfile(bossId);
     const boss = new Boss(
       this.physics,
       this.factory,
       this.combat,
       this.director,
       spawn,
-      { hp: this.config.hpScale, damage: this.config.damageScale },
+      {
+        hp: this.config.hpScale * this.rules.effects.enemyHp,
+        damage: this.config.damageScale * this.rules.effects.enemyDamage,
+      },
+      profile,
     );
+    boss.speedMultiplier = this.rules.effects.enemySpeed;
     boss.addToScene(this.renderer.scene);
     boss.onPhaseChange = (phase) => this.handleBossPhase(phase);
     boss.beginIntro();
@@ -617,9 +772,10 @@ export class Game {
     this.bossIntroTimer = 3.8;
     this.ui.setControlsActive(false);
     this.player?.setControlLocked(true);
+    this.ui.setBossIntro(profile.name, profile.kicker, profile.quote);
     this.ui.bossIntro(true);
     this.audio.stopMusic();
-    this.audio.startMusic('boss', true);
+    this.audio.startMusic(this.config.bossMusic, true);
     this.audio.playSfx('bossIntro');
     this.cameraRig.setMode('orbit', {
       center: new THREE.Vector3(spawn.x, 1.6, spawn.z),
@@ -706,7 +862,8 @@ export class Game {
     if (this.deathDelay > 0) {
       this.deathDelay -= dt;
       if (this.deathDelay <= 0) {
-        this.showGameOver();
+        if (this.rules.mode === 'campaign') this.showGameOver();
+        else this.finishMode(false, 'KO. LA RUN FINISCE QUI.');
         return;
       }
     }
@@ -717,9 +874,17 @@ export class Game {
         this.player.playVictory();
       }
       if (this.victoryDelay <= 0) {
-        // A boss can close any level: only the last arena rolls the credits.
-        if (this.levelIndex >= LEVELS.length - 1) this.showVictory();
-        else this.completeLevel();
+        if (this.rules.mode !== 'campaign') {
+          this.finishMode(
+            true,
+            this.rules.mode === 'bossRush' ? 'TUTTI I BOSS SONO CADUTI.' : 'OBIETTIVO RAGGIUNTO.',
+          );
+        } else if (this.levelIndex >= LEVELS.length - 1) {
+          // A boss can close any level: only the last arena rolls the credits.
+          this.showVictory();
+        } else {
+          this.completeLevel();
+        }
         return;
       }
     }
@@ -814,6 +979,11 @@ export class Game {
   }
 
   private updateWaves(dt: number): void {
+    if (this.rules.bossRush) {
+      this.updateBossRush(dt);
+      return;
+    }
+    if (this.rules.training) return;
     const waves = this.waves;
     if (!waves) return;
     if (this.levelCompleteDelay > 0) {
@@ -834,7 +1004,10 @@ export class Game {
       if (this.waveDelay <= 0) {
         this.awaitingNextWave = false;
         if (this.finalWave) {
-          if (!this.bossActive) this.levelCompleteDelay = 1.2;
+          if (!this.bossActive) {
+            if (this.rules.mode === 'campaign') this.levelCompleteDelay = 1.2;
+            else this.finishMode(true, 'ONDATE CHIUSE. MILANO È ANCORA IN PIEDI.');
+          }
         } else {
           waves.nextWave();
           this.announceWave();
@@ -854,6 +1027,25 @@ export class Game {
     for (const request of requests) this.spawnFromRequest(request);
   }
 
+  private updateBossRush(dt: number): void {
+    const queue = this.rules.bossRush;
+    if (!queue || this.victoryDelay >= 0) return;
+    if (this.bossRushDelay > 0) {
+      this.bossRushDelay -= dt;
+      if (this.bossRushDelay <= 0) {
+        const next = queue[this.bossRushIndex];
+        if (!next) {
+          this.finishMode(true, 'TUTTI I BOSS SONO CADUTI.');
+          return;
+        }
+        this.spawnBoss(next);
+        this.ui.toast(`BOSS ${this.bossRushIndex + 1} / ${queue.length}`, bossProfile(next).name, 1600);
+      }
+      return;
+    }
+    if (!this.boss && this.bossRushIndex < queue.length) this.bossRushDelay = 0.8;
+  }
+
   private announceWave(): void {
     const waves = this.waves;
     if (!waves) return;
@@ -865,7 +1057,7 @@ export class Game {
 
   private awardWaveClear(): void {
     const bonus = 400 + (this.waves?.waveIndex ?? 0) * 220;
-    this.score += bonus;
+    this.addScore(bonus);
     this.player?.addEnergy(10);
     this.ui.toast('ONDATA COMPLETATA', `+${bonus} PUNTI`, 1300);
     this.combo.reset();
@@ -886,9 +1078,9 @@ export class Game {
       const db = Math.hypot(b.x - (player?.posX ?? 0), b.z - (player?.posZ ?? 0));
       return db - da;
     });
-    const chosen = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))] ?? sorted[0];
-    const jitterX = (Math.random() - 0.5) * 1.6;
-    const jitterZ = (Math.random() - 0.5) * 1.6;
+    const chosen = sorted[Math.floor(this.rng() * Math.min(3, sorted.length))] ?? sorted[0];
+    const jitterX = (this.rng() - 0.5) * 1.6;
+    const jitterZ = (this.rng() - 0.5) * 1.6;
     const x = THREE.MathUtils.clamp((chosen?.x ?? 0) + jitterX, (bounds?.minX ?? -18) + 2, (bounds?.maxX ?? 18) - 2);
     const z = THREE.MathUtils.clamp((chosen?.z ?? 0) + jitterZ, (bounds?.minZ ?? -18) + 2, (bounds?.maxZ ?? 18) - 2);
     const variant = nextVariant++ % 3;
@@ -899,9 +1091,13 @@ export class Game {
       this.director,
       archetype,
       new THREE.Vector3(x, 0, z),
-      { hp: this.config.hpScale, damage: this.config.damageScale },
+      {
+        hp: this.config.hpScale * this.rules.effects.enemyHp,
+        damage: this.config.damageScale * this.rules.effects.enemyDamage,
+      },
       variant,
     );
+    enemy.speedMultiplier = this.rules.effects.enemySpeed;
     enemy.setYaw(Math.atan2((player?.posX ?? 0) - x, (player?.posZ ?? 0) - z));
     enemy.addToScene(this.renderer.scene);
     this.enemies.push(enemy);
@@ -1011,7 +1207,7 @@ export class Game {
     this.levelCompleteShown = true;
     const hpRatio = (this.player?.hp ?? 0) / Math.max(1, this.player?.maxHp ?? 1);
     const clearBonus = 2000 * this.config.number + Math.round(hpRatio * 1200);
-    this.score += clearBonus;
+    this.addScore(clearBonus);
     const previousBest = this.save.get().bestScore;
     const stars = 1 + (hpRatio > 0.55 ? 1 : 0) + (this.levelClock < 150 ? 1 : 0);
     this.save.recordLevelComplete(this.config.id, this.score, stars);
@@ -1043,6 +1239,37 @@ export class Game {
       speed: 0.12,
       startAngle: 0.4,
     });
+  }
+
+  private finishMode(victory: boolean, note: string): void {
+    if (this.modeResultShown || this.state !== 'playing') return;
+    this.modeResultShown = true;
+    this.state = 'results';
+    const key = this.rules.recordKey;
+    const previousBest = this.modeSave.get(key).bestScore;
+    const newBest = this.rules.records
+      ? this.modeSave.record(key, this.score, this.levelBestCombo, victory)
+      : false;
+    this.input.setEnabled(false);
+    this.ui.setControlsActive(false);
+    this.ui.setPickupPrompt(false);
+    this.ui.bossIntro(false);
+    this.audio.stopMusic();
+    this.audio.playSfx(victory ? 'victory' : 'gameOver');
+    this.cameraRig.setMode('frozen');
+    this.ui.showModeResult({
+      label: this.rules.label,
+      seed: this.rules.seed,
+      score: this.score,
+      bestCombo: this.levelBestCombo,
+      kos: this.levelKos,
+      timeSeconds: this.levelClock,
+      victory,
+      newBest,
+      bestScore: Math.max(previousBest, newBest ? this.score : 0),
+      note,
+    });
+    this.ui.refreshModes();
   }
 
   private showGameOver(): void {
@@ -1102,12 +1329,16 @@ export class Game {
       this.startZombies(this.lastZombiesMode, false);
       return;
     }
+    if (this.rules.mode !== 'campaign') {
+      this.restartMode();
+      return;
+    }
     this.startLevel(this.levelIndex, this.levelStartScore);
     this.requestPointerLock();
   }
 
   private returnToMenu(): void {
-    this.save.recordScore(this.score);
+    if (this.rules.mode === 'campaign') this.save.recordScore(this.score);
     this.cleanupActors();
     if (this.zombies) {
       this.zombies.checkpoint();
@@ -1119,6 +1350,7 @@ export class Game {
     this.ui.setPickupPrompt(false);
     this.ui.bossIntro(false);
     this.audio.stopMusic();
+    this.rules = campaignRulesFor();
     this.loadMenuScene();
     this.audio.setPaused(false);
     this.loop.setPaused(false);
@@ -1164,6 +1396,8 @@ export class Game {
 
   private handleWipeSave(): void {
     this.save.reset();
+    this.zombieSave.reset();
+    this.modeSave.reset();
     this.applySettings(this.save.getSettings());
     this.ui.setSaveStatus('Salvataggi cancellati. Si riparte dal primo maranza.');
     this.ui.showMenu();
@@ -1246,13 +1480,38 @@ export class Game {
     const player = this.player;
     const waves = this.waves;
     const levelStarted = Boolean(waves?.started);
-    const waveNumber = waves ? (levelStarted ? waves.waveNumber : 1) : 1;
-    const waveTotal = waves?.waveTotal ?? this.config.waves.length;
-    const remaining = waves?.remainingInWave ?? 0;
+    const bossRush = this.rules.bossRush;
+    const waveNumber = bossRush
+      ? Math.min(bossRush.length, this.bossRushIndex + 1)
+      : waves
+        ? levelStarted
+          ? waves.waveNumber
+          : 1
+        : 1;
+    const waveTotal = bossRush
+      ? bossRush.length
+      : this.rules.training
+        ? 1
+        : waves?.waveTotal ?? this.config.waves.length;
+    const bestScore =
+      this.rules.mode === 'campaign'
+        ? this.save.get().bestScore
+        : this.modeSave.get(this.rules.recordKey).bestScore;
+    const remaining = bossRush
+      ? bossRush.length - Math.min(this.bossRushIndex, bossRush.length)
+      : this.rules.training
+        ? this.enemies.filter((enemy) => enemy.alive).length
+        : waves?.remainingInWave ?? 0;
     const waveDef = waves?.currentWave ?? this.config.waves[0];
     const totalInWave = waveDef?.spawns.reduce((sum, spawn) => sum + spawn.count, 0) ?? 0;
     const waveProgress = totalInWave > 0 ? Math.min(1, 1 - remaining / totalInWave) : 0;
     const boss = this.boss;
+    const levelName =
+      this.rules.mode === 'campaign'
+        ? this.config.name
+        : this.rules.mode === 'remix'
+          ? `${this.rules.label} · ${this.rules.seed}`
+          : this.rules.label;
 
     const model: HudModel = {
       hp: player?.hp ?? 0,
@@ -1260,8 +1519,8 @@ export class Game {
       energy: player?.energy ?? 0,
       maxEnergy: player?.maxEnergy ?? 1,
       score: this.score,
-      best: Math.max(this.save.get().bestScore, this.score),
-      levelName: this.config.name,
+      best: Math.max(bestScore, this.score),
+      levelName,
       waveNumber,
       waveTotal,
       enemiesRemaining: remaining,
@@ -1274,7 +1533,7 @@ export class Game {
       bossActive: this.bossActive && boss !== null,
       bossHp: boss?.hp ?? 0,
       bossMaxHp: boss?.maxHp ?? 1,
-      bossName: this.config.bossName ?? 'IL RE DEL BORSELLO',
+      bossName: boss?.profile.name ?? this.config.bossName ?? bossProfile(this.config.bossId).name,
       bossPhaseLabel: boss?.phaseLabel ?? 'FASE I — TRUCCIDERO',
     };
     this.ui.updateHud(model);
@@ -1452,7 +1711,31 @@ export class Game {
     }
   }
 
-  /** Test hook: jumps straight into a campaign level (1-based). */
+  /** Test hook: starts one of the extra modes without touching the menu. */
+  debugStartMode(mode: ModeId, challengeId?: string): void {
+    this.startMode(mode, challengeId);
+  }
+
+  /** Test hook: current mode metadata for assertions. */
+  debugModeInfo(): Record<string, unknown> {
+    return {
+      mode: this.rules.mode,
+      label: this.rules.label,
+      seed: this.rules.seed,
+      recordKey: this.rules.recordKey,
+      modifiers: [...this.rules.modifiers],
+      playerMaxHp: this.player?.maxHp ?? 0,
+      playerDamage: this.player?.damageMultiplier ?? 1,
+      enemySpeed: this.rules.effects.enemySpeed,
+      scoreMultiplier: this.rules.effects.scoreMultiplier,
+      score: this.score,
+      levelIndex: this.levelIndex,
+      bossRushIndex: this.bossRushIndex,
+      training: this.rules.training,
+    };
+  }
+
+  /** Jumps straight into a campaign level (1-based). */
   debugJumpToLevel(number: number): void {
     const index = Math.max(0, Math.min(LEVELS.length - 1, Math.round(number) - 1));
     this.startLevel(index, 0);

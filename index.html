@@ -81,9 +81,10 @@
           </button>
           <button class="btn" id="btn-levels"><span class="btn__index">02</span><span class="btn__label">LIVELLI</span><span class="btn__sub">Scegli la piazza</span></button>
           <button class="btn" id="btn-zombies"><span class="btn__index">03</span><span class="btn__label">ZOMBIES</span><span class="btn__sub">Notte morta a Milano</span></button>
-          <button class="btn" id="btn-help"><span class="btn__index">04</span><span class="btn__label">COME GIOCARE</span></button>
-          <button class="btn" id="btn-settings"><span class="btn__index">05</span><span class="btn__label">IMPOSTAZIONI</span></button>
-          <button class="btn" id="btn-credits"><span class="btn__index">06</span><span class="btn__label">CREDITI</span></button>
+          <button class="btn" id="btn-modes"><span class="btn__index">04</span><span class="btn__label">MODALITÀ</span><span class="btn__sub">Sfide, boss rush, remix</span></button>
+          <button class="btn" id="btn-help"><span class="btn__index">05</span><span class="btn__label">COME GIOCARE</span></button>
+          <button class="btn" id="btn-settings"><span class="btn__index">06</span><span class="btn__label">IMPOSTAZIONI</span></button>
+          <button class="btn" id="btn-credits"><span class="btn__index">07</span><span class="btn__label">CREDITI</span></button>
         </nav>
 
         <aside class="menu__stats">
@@ -168,6 +169,61 @@
           <button class="btn" data-zmode="infinite"><span class="btn__label">INFINITA</span><span class="btn__sub">record personale</span></button>
           <button class="btn btn--ghost" data-back>INDIETRO</button>
         </div>
+      </section>
+
+      <!-- ══════════════ MODES ══════════════ -->
+      <section id="screen-modes" class="screen screen--modes" aria-label="Modalità extra">
+        <header class="levels__head">
+          <div>
+            <span class="levels__kicker">OLTRE LA CAMPAGNA · NESSUN PERMESSO</span>
+            <h2 class="levels__title">MODA<span>LITÀ</span></h2>
+          </div>
+          <div class="levels__meta">
+            <span id="modes-record-line">NESSUN RECORD SALVATO</span>
+            <span class="levels__hint">I record delle modalità restano su questo dispositivo.</span>
+          </div>
+        </header>
+        <div class="modes__grid">
+          <button class="mode-card" data-mode="survival">
+            <span class="mode-card__index">01</span>
+            <span class="mode-card__name">SOPRAVVIVENZA</span>
+            <span class="mode-card__tag">20 ROUND · BOSS OGNI 5</span>
+            <span class="mode-card__desc">Venti ondate in piazza Duomo, boss ogni cinque round. Nessun traguardo: solo il record.</span>
+            <span class="mode-card__best" data-best="survival">RECORD 00000</span>
+          </button>
+          <button class="mode-card" data-mode="bossRush">
+            <span class="mode-card__index">02</span>
+            <span class="mode-card__name">BOSS RUSH</span>
+            <span class="mode-card__tag">6 BOSS · FILA UNICA</span>
+            <span class="mode-card__desc">Buttafuori, Trainer, DJ, Re del Borsello, Re dei Tetti e Consiglio. Uno dopo l’altro.</span>
+            <span class="mode-card__best" data-best="boss-rush">RECORD 00000</span>
+          </button>
+          <button class="mode-card" data-mode="training">
+            <span class="mode-card__index">03</span>
+            <span class="mode-card__name">ALLENAMENTO</span>
+            <span class="mode-card__tag">SALA PROVE · NESSUN RECORD</span>
+            <span class="mode-card__desc">Un manichino indistruttibile alla Stazione Centrale: combo, catena e schivata senza punteggio.</span>
+            <span class="mode-card__best" data-best="training">SEMPRE APERTO</span>
+          </button>
+          <button class="mode-card" data-mode="remix">
+            <span class="mode-card__index">04</span>
+            <span class="mode-card__name">REMIX</span>
+            <span class="mode-card__tag">SEED + 2 MODIFICATORI</span>
+            <span class="mode-card__desc">Una piazza scelta dal seed, due modificatori e nemici rimescolati. Il seed resta scritto in HUD.</span>
+            <span class="mode-card__best" data-best="remix">RECORD 00000</span>
+          </button>
+        </div>
+        <div class="modes__challenges">
+          <div class="modes__challenge-head">
+            <h3>SFIDE</h3>
+            <span>Seed fisso · modificatori dichiarati · un solo tentativo alla volta</span>
+          </div>
+          <div class="modes__challenge-row" id="challenge-list"></div>
+        </div>
+        <footer class="levels__foot">
+          <button class="btn btn--ghost" data-back>INDIETRO</button>
+          <span class="levels__foot-note">Le modalità non toccano i salvataggi della campagna.</span>
+        </footer>
       </section>
 
       <!-- ══════════════ PANELS ══════════════ -->
@@ -502,6 +558,27 @@
           <div class="results__actions">
             <button class="btn btn--primary" id="btn-zr-retry"><span class="btn__label">RIPROVA</span></button>
             <button class="btn btn--ghost" id="btn-zr-menu"><span class="btn__label">MENU</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-mode-result" class="screen screen--results" aria-label="Fine modalità">
+        <div class="results results--modes">
+          <span class="results__kicker" id="mr-kicker">RUN TERMINATA</span>
+          <h2 class="results__title" id="mr-title">SOPRAVVIVENZA</h2>
+          <p class="results__big" id="mr-reason">KO.</p>
+          <div class="results__grid">
+            <div><span>PUNTEGGIO</span><b id="mr-score">0</b></div>
+            <div><span>MIGLIOR COMBO</span><b id="mr-combo">0</b></div>
+            <div><span>MARANZA MESSI A POSTO</span><b id="mr-kos">0</b></div>
+            <div><span>TEMPO</span><b id="mr-time">0:00</b></div>
+            <div class="mr-seed"><span>SEED</span><b id="mr-seed">SURVIVAL-20</b></div>
+          </div>
+          <p class="results__note" id="mr-best">RECORD: 0</p>
+          <div class="results__actions">
+            <button class="btn btn--primary" id="btn-mr-retry"><span class="btn__label">RIPROVA</span></button>
+            <button class="btn" id="btn-mr-modes"><span class="btn__label">MODALITÀ</span></button>
+            <button class="btn btn--ghost" id="btn-mr-menu"><span class="btn__label">MENU</span></button>
           </div>
         </div>
       </section>

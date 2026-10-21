@@ -1,9 +1,11 @@
 # MARANZA FIGHT 3
 
 Beat 'em up arcade 3D, mobile-first, giocabile da browser. Milano caricaturale, **nove livelli in tre
-capitoli**, quattro archetipi di "maranza" e due scontri con il boss: **Il Re del Borsello** al Duomo
-e **Il Re dei Tetti** sul finale. In più una modalità survival separata, **Notte morta a Milano**:
-cinque settori, barricate, armi da comprare, perk e venti round per chiamare l'estrazione.
+capitoli**, quattro archetipi di "maranza" e **sei boss** — Buttafuori, Personal Trainer, DJ,
+Consiglio del Borsello, Re del Borsello e Re dei Tetti. In più quattro modalità fuori campagna
+(**Sopravvivenza**, **Boss Rush**, **Allenamento**, **Remix**), tre sfide a seed fisso e la modalità
+survival separata **Notte morta a Milano**: cinque settori, barricate, armi da comprare, perk e
+venti round per chiamare l'estrazione.
 
 Tutto gira lato client: rendering Three.js su WebGL, fisica Rapier 3D compilata in WebAssembly,
 audio sintetizzato con la Web Audio API. Nessun backend, nessuna API key, nessun servizio a pagamento.
@@ -107,11 +109,11 @@ stick destro per la camera, A pugno, X calcio, B schivata, Y speciale, Start pau
     3. **Navigli Nightlife** — canale con acqua animata, barche ormeggiate, spritz e insegne al neon.
   - **Capitolo II — Piazze**
     4. **Duomo Showdown** — piazza, palco e il Re del Borsello (boss di metà campagna).
-    5. **Porta Venezia** — corso, portici, edicola e strisce pedonali.
-    6. **Parco Sempione** — prato, alberi, campo da basket e il Castello sullo sfondo.
+    5. **Porta Venezia** — corso, portici, edicola e il Buttafuori (boss di capitolo).
+    6. **Parco Sempione** — prato, alberi, campo da basket e il Personal Trainer.
   - **Capitolo III — Quartieri**
-    7. **Isola** — cantiere delle torri: container, ponteggi, gru.
-    8. **Darsena** — mercato sul naviglio, faro, banchine e acqua animata.
+    7. **Isola** — cantiere delle torri, container, ponteggi e il Consiglio del Borsello.
+    8. **Darsena** — mercato sul naviglio, faro, banchine e il DJ.
     9. **Tetti di Milano** — rooftop del Bosco Verticale, eliporto e il Re dei Tetti (finale).
 - **Selezione livelli**: schermata dedicata con nove anteprime 16:9 generate dalle vere arene,
   capitolo di appartenenza, record per livello, stelle (ottenute da salute residua e tempo),
@@ -124,15 +126,23 @@ stick destro per la camera, A pugno, X calcio, B schivata, Y speciale, Start pau
 - **Juicing**: hitstop (più lungo sui colpi pesanti), slow motion su schivata perfetta e KO del boss,
   zoom punch della camera (FOV kick), camera shake, lampi additivi sull'impatto, scintille, onde
   d'urto, flash a schermo su danno/speciale/fasi del boss.
+- **Modalità extra** (schermata `MODALITÀ`):
+  - **Sopravvivenza** — venti round in piazza Duomo, un boss ogni cinque, record separato.
+  - **Boss Rush** — Buttafuori, Trainer, DJ, Re del Borsello, Re dei Tetti e Consiglio in fila unica.
+  - **Allenamento** — manichino indistruttibile alla Stazione Centrale, senza punteggio né record.
+  - **Remix** — piazza e due modificatori derivati da un seed, mostrato in HUD e nel risultato.
+  - **Sfide** — Tecnica, Pressione ed Essenziale con seed fisso e effetti dichiarati; i record
+    delle modalità vivono in `localStorage` sotto `maranza-fight-3:modes` e non toccano la campagna.
 - **Notte morta a Milano** (modalità separata): mappa a cinque settori collegati da porte
   acquistabili, finestre barricabili in ogni zona, round con ondate crescenti, armi al muro,
   corrente, tre perk (Resistenza, Mani Veloci, Passo Lungo), munizioni, doppio punteggio e
   riparazione delle barricate. Due regole: **Infinita** (record personale) ed **Estrazione**
   (sopravvivi a venti round, poi resta nella zona per otto secondi sotto pressione). Checkpoint
   separato tra un round e l'altro, record e run in pausa nella schermata dedicata.
-- **Presentazione**: menu, selezione livelli, come giocare, impostazioni (qualità bassa/media/alta, volumi,
-  sensibilità, inversione Y, camera shake, zona morta), pausa, livelli completati, vittoria,
-  game over, briefing e risultati Zombies, schermata di rotazione e schermata di errore WebGL.
+- **Presentazione**: menu, selezione livelli, schermata modalità con record e sfide, come giocare,
+  impostazioni (qualità bassa/media/alta, volumi, sensibilità, inversione Y, camera shake, zona morta),
+  pausa, livelli completati, vittoria, game over, briefing e risultati Zombies, risultati delle
+  modalità (punteggio, combo, KO, tempo, seed), schermata di rotazione e schermata di errore WebGL.
 
 ### Qualità e performance
 
@@ -157,7 +167,7 @@ src/
 ├── controls/               InputManager, KeyboardInput, TouchControls, GamepadInput
 ├── ui/                     HUD, UI (menu, schermate, impostazioni)
 ├── audio/                  AudioManager (sintesi SFX + musica procedurale)
-├── systems/                WaveManager, SaveManager (v3 + migrazione), levelIds, SettingsManager
+├── systems/                WaveManager, SaveManager (v3 + migrazione), GameModes (regole, seed, modificatori), ModeSave, levelIds, SettingsManager
 ├── zombies/                ZombiesMode, ZombiesMap, Zombie, Weapons, WeaponView, ZombieSave
 └── styles/main.css
 public/
@@ -173,18 +183,20 @@ scripts/
 ## Test
 
 ```bash
-npm test          # 75 test di logica: hit detection, combo, salvataggi (campagna e zombies), armi, catalogo livelli, ondate, state machine, animazioni, director
-npm run test:e2e  # 24 test browser reali (desktop + mobile emulato): 21 eseguiti, 3 saltati per progetto
+npm test          # 87 test di logica: hit detection, combo, salvataggi (campagna, zombies, modalità), armi, catalogo livelli, modalità/seed, ondate, state machine, animazioni, director
+npm run test:e2e  # 36 test browser reali (desktop + mobile emulato): 32 eseguiti, 4 saltati per progetto
 ```
 
 I test Playwright coprono: boot con WebGL e Rapier attivi, avvio partita, movimento da tastiera,
 rotazione camera col mouse, pugni con danno/punteggio, pausa e ripresa, game over e riprova,
 boss attivo con barra dedicata al Duomo, selezione livelli (nove schede in tre capitoli, blocchi,
 avvio della piazza scelta), schermata di rotazione in portrait, joystick touch e pulsanti con
-drag camera multitouch. Per Zombies: ingresso dal menu, HUD attivo, sparo con danno reale,
-chiusura del round, layout mobile senza sovrapposizioni tra arma e stick e fuoco touch. I test
-desktop (tastiera, mouse e mira zombies) sono saltati in emulazione mobile perché lì i comandi
-sono touch.
+drag camera multitouch. Per le modalità: griglia e sfide, sopravvivenza 1/20, primo boss della
+Boss Rush, manichino da allenamento con danno reale, modificatori della sfida Essenziale, seed
+Remix in HUD e nella schermata di risultato, card leggibili a 915×412. Per Zombies: ingresso dal
+menu, HUD attivo, sparo con danno reale, chiusura del round, layout mobile senza sovrapposizioni
+tra arma e stick e fuoco touch. I test desktop (tastiera, mouse e mira zombies) sono saltati in
+emulazione mobile perché lì i comandi sono touch.
 
 I test e2e girano sulla build di produzione servita da `vite preview` (porta 4173), non sul dev server.
 Gli hook `window.__MARANZA__` (snapshot, spawn, teleport, clearWave, jumpToLevel, hurtPlayer,
@@ -202,8 +214,11 @@ un dev server temporaneo, apre `/?capture=N`, attende il render dell'arena e sal
 - FPS misurati solo sulla macchina di sviluppo (desktop Apple Silicon, Chromium): l'obiettivo di
   30 FPS stabili su smartphone di fascia media non è stato verificato su hardware reale.
 - Il service worker non è attivo durante i test Playwright (`serviceWorkers: 'block'`).
-- Solo Duomo e Tetti hanno uno scontro con il boss: i boss dedicati agli altri capitoli
-  (Buttafuori, Trainer, DJ) sono lavoro futuro, non promesse già rispettate.
+- I sei boss sono presenti in campagna e nella Boss Rush; la Boss Rush è stata completata in
+  browser, mentre i livelli 5–8 non sono stati rigiocati fino alla vittoria dopo l'aggiunta dei
+  rispettivi boss.
+- Sopravvivenza genera venti round con boss ogni cinque, ma la scalata completa non è stata
+  chiusa in browser; delle tre sfide è stata verificata a fondo solo *Essenziale*.
 - Zombies è stato bilanciato e verificato in emulazione Chromium (desktop e 844×390): i round
 alti, l'estrazione e la corsa alle venti ondate non sono stati provati su hardware reale.
 

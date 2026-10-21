@@ -37,6 +37,8 @@ export class Player extends Fighter {
   speedMultiplier = 1;
   /** Dodge cooldown multiplier used by Zombies perks (default 1). */
   dodgeCooldownMultiplier = 1;
+  /** Attack damage multiplier used by mode modifiers and Zombies perks (default 1). */
+  damageMultiplier = 1;
   chainIndex = 0;
   chainTimer = 0;
   comboHits = 0;
@@ -60,13 +62,14 @@ export class Player extends Fighter {
     combat: CombatSystem,
     events: PlayerEvents,
     spawn: THREE.Vector3,
+    maxHp = 120,
   ) {
     super(physics, factory, {
       team: 'player',
       look: 'player',
       radius: 0.37,
       halfHeight: 0.52,
-      maxHp: 120,
+      maxHp,
       spawn,
       yaw: 0,
     });
@@ -215,8 +218,12 @@ export class Player extends Fighter {
     this.queuedTtl = 0.5;
   }
 
-  private startAttack(spec: AttackSpec): boolean {
+  private startAttack(baseSpec: AttackSpec): boolean {
     this.faceAim();
+    const spec =
+      this.damageMultiplier === 1
+        ? baseSpec
+        : { ...baseSpec, damage: baseSpec.damage * this.damageMultiplier };
     const attack = this.combat.begin(this, spec);
     if (!attack) return false;
     this.lastAttackSerial = attack.serial;

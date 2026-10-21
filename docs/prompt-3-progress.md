@@ -1,5 +1,8 @@
 # PROMPT 3 — Stato reale, baseline e piano
 
+> Nota: fotografia **pre-espansione** (21 ottobre, mattina). Lo stato aggiornato, con sei boss e le
+> modalità extra, è in [expansion-progress.md](expansion-progress.md).
+
 Aggiornato: 2026-10-21 · base: commit `bb9299a` (v1.2.0, main)
 
 ## 1. Stato effettivo verificato

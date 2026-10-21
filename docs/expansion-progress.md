@@ -28,20 +28,26 @@ Stati: **non iniziato**, **implementato**, **verificato** (verificato = giocato 
 | Anteprime reali delle arene | verificato | 9 JPEG 1200×675 rigenerati da `scripts/capture-previews.mjs` |
 | Boss di metà campagna (Duomo) e finale (Tetti) | verificato | nome boss dinamico nella HUD; il boss del Duomo chiude il livello, quello dei Tetti chiude la campagna |
 | Nuovi nemici (Guardiano, Lanciatore, Coordinatore) | non iniziato | oggi restano base, turbo, puffer |
-| Nuovi boss (Buttafuori, Trainer, DJ, Consiglio) | non iniziato | servono archetipi e set di attacchi dedicati |
+| Boss di capitolo (Buttafuori, Trainer, DJ, Consiglio) | verificato in Boss Rush | profili con tre fasi e attacchi dedicati; livelli 5–8 non ancora rigiocati fino alla vittoria |
 | Obiettivi intermedi di livello | non iniziato | |
 | Difficoltà multiple | non iniziato | |
 | Cosmetici | non iniziato | |
-| Sopravvivenza | non iniziato | |
-| Boss Rush | non iniziato | |
+| Sopravvivenza | implementato, parzialmente verificato | 20 round generati, boss ogni 5, HUD e avvio e2e; la scalata completa non è stata chiusa in browser |
+| Boss Rush | verificato | sei boss in fila, risultato finale, record e ritorno alle modalità provati in browser |
+| Allenamento | verificato | manichino indistruttibile, nessun punteggio/record, HUD 1/1; colpo e danno in e2e |
+| Sfide a seed fisso | implementato, verificato Essenziale | Tecnica, Pressione ed Essenziale; salute 80, nemici più duri e seed verificati per Essenziale |
+| Remix | verificato | seed in HUD, piazza e modificatori deterministici, risultato con seed e riprova sullo stesso seed |
 | **Notte morta a Milano (Zombies)** | verificato | modalità separata: 5 settori, round, armi, perk, barricate, estrazione |
 
 ## Verifiche eseguite (21 ottobre)
 
 - `npx tsc --noEmit` → 0 errori.
-- `npm test` → 11 file, 75 test passati.
+- `npm test` → 12 file, 87 test passati (modalità, seed, record e persistenza inclusi).
 - `npm run build` → build pulita (three 498 kB, Rapier 2.2 MB).
-- `npx playwright test` → 24 test, 21 passati, 3 saltati per progetto (desktop-only su mobile emulato).
+- `npx playwright test` → 36 test, 32 passati, 4 saltati per progetto (desktop-only su mobile emulato).
+- Modalità extra provate in browser reale (1440×900 e 915×412): griglia senza overflow orizzontale,
+  sopravvivenza 1/20, Boss Rush con sei boss e record 146880, manichino allenamento (115000 HP),
+  sfida Essenziale con 80 HP, Remix con seed in HUD, risultato e riprova.
 - Zombies verificato su desktop e mobile emulato 844×390: ingresso dal menu, HUD, sparo con punti,
   chiusura del round, fuoco touch; nessun errore console. Vedi `scripts/zombies-shots.mjs`.
 - Browser reale (dev server): selezione livelli desktop 1440×860 e mobile landscape 915×412 senza overflow,
@@ -69,6 +75,7 @@ Dettagli tecnici in [zombies-mode.md](zombies-mode.md).
 
 ## Prossimo passo
 
-Aggiungere i boss di capitolo (Buttafuori a Porta Venezia, Trainer al Sempione, DJ alla Darsena) con
-attacchi e arene dedicate, poi le modalità (Sopravvivenza, Boss Rush) e la difficoltà selezionabile.
-Ogni livello passa a "verificato" solo dopo una partita reale con vittoria **e** sconfitta.
+Chiudere in browser la scalata di Sopravvivenza fino al round 20 e rigiocare i livelli 5–8 fino alla
+vittoria sul rispettivo boss di capitolo, non solo dentro la Boss Rush. Poi difficoltà selezionabile,
+obiettivi intermedi e cosmetici. Ogni livello passa a "verificato" solo dopo una partita reale con
+vittoria **e** sconfitta.
