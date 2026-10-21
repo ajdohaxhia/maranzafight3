@@ -17,9 +17,21 @@ export type SfxName =
   | 'victory'
   | 'bossIntro'
   | 'bossPhase'
-  | 'error';
+  | 'error'
+  | 'gunPistol'
+  | 'gunSmg'
+  | 'gunShotgun'
+  | 'gunRifle'
+  | 'reload'
+  | 'empty'
+  | 'buy'
+  | 'deny'
+  | 'power'
+  | 'roundStart'
+  | 'extract'
+  | 'upgrade';
 
-export type MusicTrack = 'menu' | 'level1' | 'level2' | 'level3' | 'level4' | 'level5' | 'boss';
+export type MusicTrack = 'menu' | 'level1' | 'level2' | 'level3' | 'level4' | 'level5' | 'boss' | 'zombies';
 
 interface TrackConfig {
   bpm: number;
@@ -35,6 +47,7 @@ const TRACKS: Record<MusicTrack, TrackConfig> = {
   level4: { bpm: 128, root: 44, scale: [0, 3, 5, 6, 7, 10, 12] },
   level5: { bpm: 134, root: 38, scale: [0, 1, 3, 5, 7, 8, 11] },
   boss: { bpm: 132, root: 40, scale: [0, 1, 3, 5, 7, 8, 11] },
+  zombies: { bpm: 96, root: 38, scale: [0, 1, 3, 5, 7, 8, 10] },
 };
 
 const midiToFreq = (midi: number): number => 440 * Math.pow(2, (midi - 69) / 12);
@@ -239,6 +252,52 @@ export class AudioManager {
           this.tone(ctx.currentTime, 150, 0.18, 'square', 0.12);
           this.tone(ctx.currentTime + 0.16, 120, 0.25, 'square', 0.12);
           break;
+        case 'gunPistol':
+          this.noise(0.09, 2200, 0.34, 'highpass');
+          this.tone(ctx.currentTime, 190, 0.1, 'square', 0.2, 60);
+          break;
+        case 'gunSmg':
+          this.noise(0.06, 2600, 0.26, 'highpass');
+          this.tone(ctx.currentTime, 230, 0.06, 'square', 0.14, 90);
+          break;
+        case 'gunShotgun':
+          this.noise(0.24, 460, 0.46, 'lowpass');
+          this.tone(ctx.currentTime, 92, 0.22, 'sine', 0.44, 34);
+          break;
+        case 'gunRifle':
+          this.noise(0.16, 1500, 0.4, 'highpass');
+          this.tone(ctx.currentTime, 120, 0.18, 'sawtooth', 0.28, 42);
+          break;
+        case 'reload':
+          this.tone(ctx.currentTime, 420, 0.05, 'square', 0.08);
+          this.tone(ctx.currentTime + 0.16, 300, 0.06, 'square', 0.1);
+          this.noise(0.08, 900, 0.16, 'bandpass');
+          break;
+        case 'empty':
+          this.tone(ctx.currentTime, 900, 0.035, 'square', 0.07);
+          break;
+        case 'buy':
+          [523, 784].forEach((freq, i) => this.tone(ctx.currentTime + i * 0.07, freq, 0.1, 'triangle', 0.14));
+          break;
+        case 'deny':
+          this.tone(ctx.currentTime, 160, 0.14, 'square', 0.1);
+          this.tone(ctx.currentTime + 0.1, 120, 0.18, 'square', 0.1);
+          break;
+        case 'power':
+          this.sweep(80, 720, 0.5, 'sawtooth', 0.18);
+          this.tone(ctx.currentTime + 0.3, 880, 0.2, 'triangle', 0.14);
+          break;
+        case 'roundStart':
+          this.tone(ctx.currentTime, 110, 0.45, 'sawtooth', 0.26, 55);
+          this.tone(ctx.currentTime + 0.12, 220, 0.35, 'square', 0.12);
+          this.noise(0.35, 500, 0.2, 'lowpass');
+          break;
+        case 'extract':
+          [660, 880, 660, 880, 1100].forEach((freq, i) => this.tone(ctx.currentTime + i * 0.11, freq, 0.14, 'triangle', 0.14));
+          break;
+        case 'upgrade':
+          [440, 587, 880].forEach((freq, i) => this.tone(ctx.currentTime + i * 0.08, freq, 0.14, 'triangle', 0.14));
+          break;
       }
     } catch {
       /* never let audio break gameplay */
@@ -300,8 +359,15 @@ export class AudioManager {
     const bassNote = root + degree - 12;
     const chord = [0, 3, 7].map((interval) => midiToFreq(root + degree + interval));
 
-    const kickSteps = track === 'boss' ? [0, 3, 4, 8, 11, 12] : track === 'level2' ? [0, 4, 8, 10, 14] : [0, 8, 10];
-    const snareSteps = track === 'level2' ? [4, 12, 15] : [4, 12];
+    const kickSteps =
+      track === 'boss'
+        ? [0, 3, 4, 8, 11, 12]
+        : track === 'level2'
+          ? [0, 4, 8, 10, 14]
+          : track === 'zombies'
+            ? [0, 6, 8, 14]
+            : [0, 8, 10];
+    const snareSteps = track === 'level2' ? [4, 12, 15] : track === 'zombies' ? [4, 12] : [4, 12];
 
     if (kickSteps.includes(s)) this.kick(time, track === 'menu' ? 0.24 : 0.34);
     if (snareSteps.includes(s)) this.snare(time, track === 'menu' ? 0.06 : 0.1);

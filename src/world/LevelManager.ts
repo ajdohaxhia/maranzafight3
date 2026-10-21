@@ -564,6 +564,11 @@ export class LevelManager {
     this.current?.builder.tick(dt);
   }
 
+  /** Pins the night sky to the camera so stars never slide with parallax. */
+  followSky(position: THREE.Vector3): void {
+    this.current?.builder.followCamera(position);
+  }
+
   get levelNumber(): number {
     return this.current?.config.number ?? 1;
   }

@@ -34,13 +34,16 @@ Stati: **non iniziato**, **implementato**, **verificato** (verificato = giocato 
 | Cosmetici | non iniziato | |
 | Sopravvivenza | non iniziato | |
 | Boss Rush | non iniziato | |
+| **Notte morta a Milano (Zombies)** | verificato | modalità separata: 5 settori, round, armi, perk, barricate, estrazione |
 
 ## Verifiche eseguite (21 ottobre)
 
 - `npx tsc --noEmit` → 0 errori.
-- `npm test` → 8 file, 48 test passati.
-- `npm run build` → build pulita (bundle 208 kB, three 498 kB, Rapier 2.2 MB).
-- `npx playwright test` → 20 test, 18 passati, 2 saltati (solo desktop).
+- `npm test` → 11 file, 75 test passati.
+- `npm run build` → build pulita (three 498 kB, Rapier 2.2 MB).
+- `npx playwright test` → 24 test, 21 passati, 3 saltati per progetto (desktop-only su mobile emulato).
+- Zombies verificato su desktop e mobile emulato 844×390: ingresso dal menu, HUD, sparo con punti,
+  chiusura del round, fuoco touch; nessun errore console. Vedi `scripts/zombies-shots.mjs`.
 - Browser reale (dev server): selezione livelli desktop 1440×860 e mobile landscape 915×412 senza overflow,
   Porta Venezia giocata con ondate attive, Tetti con boss e schermata di vittoria, Duomo con boss
   che porta alla schermata di livello completato invece che ai titoli di coda.
@@ -48,6 +51,21 @@ Stati: **non iniziato**, **implementato**, **verificato** (verificato = giocato 
   come completato, Tetti marcato completato ma ancora bloccato perché mancano Isola e Darsena.
 - Nuove arene avviate in gioco con ondate attive: Sempione 297 draw call, Isola 314, Darsena 163
   (qualità alta, desktop 1440×860), nessun errore in console.
+
+## Notte morta a Milano (Zombies)
+
+Modalità survival separata dalla campagna, raggiungibile dal menu con `ZOMBIES`.
+Dettagli tecnici in [zombies-mode.md](zombies-mode.md).
+
+| Elemento | Stato | Note |
+| --- | --- | --- |
+| Mappa a 5 settori (bottega, via, cortile, metro, piazza) | verificato | porte acquistabili, 21 finestre barricabili, muri con armi, corrente, 3 perk |
+| Round e ondate | verificato | ondate crescenti, intermissione 12 s, barricate danneggiabili e riparabili |
+| Armi e munizioni | verificato | pistola, SMG, fucile a pompa, fucile d'assalto; upgrade e acquisti al muro |
+| Due regole | verificato | Infinita (record) ed Estrazione (20 round + 8 s in zona) |
+| Checkpoint | verificato | chiave `maranza-fight-3:zombies`, salvataggio tra i round, run riprendibile |
+| HUD mobile | verificato | 844×390: arma libera da stick e pulsanti, fuoco touch sotto test e2e |
+| Bilanciamento round alti | non verificato | provato in emulazione Chromium, non su hardware reale |
 
 ## Prossimo passo
 

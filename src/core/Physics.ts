@@ -125,6 +125,15 @@ export class Physics {
     return collider;
   }
 
+  /** Removes a static box collider (doors, barricades) without a world reset. */
+  removeStaticCollider(collider: RAPIER.Collider): void {
+    if (!this.world) return;
+    const body = collider.parent();
+    if (body) this.world.removeRigidBody(body);
+    else this.world.removeCollider(collider, true);
+    this.staticBodyCount = Math.max(0, this.staticBodyCount - 1);
+  }
+
   addGround(sizeX: number, sizeZ: number, y = 0, thickness = 1): RAPIER.Collider {
     return this.addStaticBox(
       { x: 0, y: y - thickness / 2, z: 0 },
@@ -161,7 +170,10 @@ export class Physics {
   }
 
   removeCharacter(character: CharacterBody): void {
-    this.characterColliders.delete(character.collider.handle);
+    // Idempotent: death code and mode disposal may both ask for the same body
+    // to be removed. Removing a stale Rapier handle twice throws an aliasing
+    // panic inside the WASM bindings.
+    if (!this.characterColliders.delete(character.collider.handle)) return;
     if (this.world) {
       this.world.removeRigidBody(character.body);
     }

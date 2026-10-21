@@ -1,4 +1,15 @@
-export type ActionKey = 'punch' | 'kick' | 'dodge' | 'special' | 'interact' | 'pause';
+export type ActionKey =
+  | 'punch'
+  | 'kick'
+  | 'dodge'
+  | 'special'
+  | 'interact'
+  | 'pause'
+  | 'fire'
+  | 'reload'
+  | 'switchWeapon'
+  | 'slot1'
+  | 'slot2';
 
 const ACTION_MAP: Record<string, ActionKey> = {
   KeyQ: 'special',
@@ -6,6 +17,10 @@ const ACTION_MAP: Record<string, ActionKey> = {
   KeyE: 'interact',
   Escape: 'pause',
   KeyP: 'pause',
+  KeyF: 'fire',
+  KeyR: 'reload',
+  Digit1: 'slot1',
+  Digit2: 'slot2',
 };
 
 export class KeyboardInput {

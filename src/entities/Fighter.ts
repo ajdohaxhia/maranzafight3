@@ -52,6 +52,8 @@ export abstract class Fighter implements Combatant {
   targetYaw: number;
   displayYaw: number;
   invulnTimer = 0;
+  /** 0..0.8 damage reduction from perks or bosses. */
+  damageReduction = 0;
   flash = 0;
   knockback = new THREE.Vector3();
   readonly pos = new THREE.Vector3();
@@ -141,8 +143,16 @@ export abstract class Fighter implements Combatant {
     }
   }
 
+  /** Removes the physics capsule once; safe to call from death or disposal. */
+  detachBody(): void {
+    if (this.bodyRemoved) return;
+    this.bodyRemoved = true;
+    this.physics.removeCharacter(this.body);
+  }
+
   /** Moves through the Rapier character controller and applies gravity. */
   protected moveHorizontal(dt: number, velocityX: number, velocityZ: number): void {
+    if (this.bodyRemoved) return;
     this.verticalVelocity += GRAVITY * dt;
     const desired = new THREE.Vector3(
       (velocityX + this.knockback.x) * dt,
@@ -193,7 +203,8 @@ export abstract class Fighter implements Combatant {
 
   applyHit(info: HitInfo, attacker: Combatant): void {
     if (!this.alive || this.isInvulnerable()) return;
-    this.hp = Math.max(0, this.hp - info.damage);
+    const incoming = info.damage * (1 - Math.max(0, Math.min(0.8, this.damageReduction)));
+    this.hp = Math.max(0, this.hp - incoming);
     this.flash = 1;
     this.invulnTimer = Math.max(this.invulnTimer, this.postHitInvuln);
     this.knockback.set(info.dirX * info.knockback, 0, info.dirZ * info.knockback);
@@ -221,8 +232,7 @@ export abstract class Fighter implements Combatant {
   }
 
   dispose(): void {
-    if (!this.bodyRemoved) this.physics.removeCharacter(this.body);
-    this.bodyRemoved = true;
+    this.detachBody();
     this.visual.root.removeFromParent();
     this.shadowGeo.dispose();
     this.shadowMat.dispose();

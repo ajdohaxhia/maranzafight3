@@ -21,6 +21,8 @@ import { Boss } from '../entities/Boss';
 import { Pickup } from '../entities/Pickup';
 import { WaveManager, type SpawnRequest } from '../systems/WaveManager';
 import { AttackDirector } from '../ai/AttackDirector';
+import { ZombiesMode, type ZombiesResult } from '../zombies/ZombiesMode';
+import { ZombieSave, type ZombiesRunMode } from '../zombies/ZombieSave';
 
 type GameState = 'boot' | 'menu' | 'playing' | 'paused' | 'results';
 
@@ -33,6 +35,7 @@ export class Game {
   private readonly input: InputManager;
   private readonly audio: AudioManager;
   private readonly save: SaveManager;
+  private readonly zombieSave = ZombieSave.create();
   private readonly ui: UI;
   private readonly factory = new CharacterFactory();
   private readonly effects: Effects;
@@ -78,6 +81,8 @@ export class Game {
   private menuMode = false;
   private interactionTarget: Pickup | null = null;
   private lastEnemyAttacks = new Map<number, number>();
+  private zombies: ZombiesMode | null = null;
+  private lastZombiesMode: ZombiesRunMode = 'infinite';
   private readonly unsubscribers: Array<() => void> = [];
   private readonly cameraTarget = new THREE.Vector3();
   private readonly debugInfo = { started: false };
@@ -116,9 +121,13 @@ export class Game {
       onRetry: () => this.retryLevel(),
       onMenu: () => this.returnToMenu(),
       onNewGamePlus: () => this.startNewGame(false),
+      onZombies: (mode) => this.startZombies(mode),
+      onZombiesResume: () => this.startZombies(this.zombieSave.active?.mode ?? 'infinite', true),
+      onZombiesRetry: () => this.startZombies(this.lastZombiesMode, false),
+      onZombiesMenu: () => this.returnToMenu(),
       onInstall: () => undefined,
       onUiSound: () => this.audio.playSfx('ui'),
-    });
+    }, this.zombieSave);
     this.applySettings(settings);
     this.loop = new GameLoop(
       {
@@ -164,6 +173,7 @@ export class Game {
     this.cleanupActors();
     this.effects.clear();
     this.combo.reset();
+    this.cameraRig.aimLook = 0;
     this.cameraRig.setMode('menu', {
       center: new THREE.Vector3(1.4, 1.15, 2.4),
       radius: 6.4,
@@ -227,6 +237,11 @@ export class Game {
 
   private startNewGame(continueRun: boolean, level = 1): void {
     this.audio.unlock();
+    if (this.zombies) {
+      this.zombies.dispose();
+      this.zombies = null;
+      this.input.setShooterMode(false);
+    }
     this.score = 0;
     this.bestCombo = 0;
     this.totalKos = 0;
@@ -241,6 +256,69 @@ export class Game {
     this.startLevel(startIndex, 0);
     this.ui.refreshMenu(this.continueLabel());
     this.requestPointerLock();
+  }
+
+  // ── Zombies ─────────────────────────────────────────────────────────
+  private startZombies(mode: ZombiesRunMode, resume = false): void {
+    this.audio.unlock();
+    if (this.zombies) {
+      this.zombies.dispose();
+      this.zombies = null;
+    }
+    this.cleanupActors();
+    this.levels.unload();
+    this.effects.clear();
+    this.pickups = [];
+    this.boss = null;
+    this.bossActive = false;
+    this.combo.reset();
+    this.ui.bossIntro(false);
+    this.lastZombiesMode = mode;
+    const snapshot = resume ? this.zombieSave.active : null;
+    this.menuMode = false;
+    this.state = 'playing';
+    this.input.setShooterMode(true);
+    this.input.clearTransient();
+    this.input.setEnabled(true);
+    this.ui.enterZombies();
+    this.loop.setPaused(false);
+    this.audio.setPaused(false);
+    this.zombies = new ZombiesMode(
+      {
+        scene: this.renderer.scene,
+        physics: this.physics,
+        factory: this.factory,
+        input: this.input,
+        audio: this.audio,
+        effects: this.effects,
+        cameraRig: this.cameraRig,
+        ui: this.ui,
+        save: this.zombieSave,
+        quality: this.save.getSettings().quality,
+        callbacks: {
+          onGameOver: (result) => this.finishZombies(result, false),
+          onVictory: (result) => this.finishZombies(result, true),
+          onExit: () => this.returnToMenu(),
+        },
+      },
+      snapshot?.mode ?? mode,
+      snapshot,
+    );
+    this.zombies.updateHud();
+    this.requestPointerLock();
+  }
+
+  private finishZombies(result: ZombiesResult, victory: boolean): void {
+    if (this.state !== 'playing') return;
+    this.state = 'results';
+    this.input.setEnabled(false);
+    this.input.setShooterMode(false);
+    this.ui.setControlsActive(false);
+    this.ui.setPickupPrompt(false);
+    this.zombies?.setHudVisible(false);
+    this.zombies?.updateHud();
+    this.audio.setPaused(false);
+    this.ui.showZombiesResult(result, victory);
   }
 
   private startLevel(index: number, baseScore?: number): void {
@@ -294,6 +372,7 @@ export class Game {
     this.cameraTarget.copy(this.player.pos);
     this.cameraRig.yaw = startYaw;
     this.cameraRig.pitch = 0.24;
+    this.cameraRig.aimLook = 0;
 
     this.state = 'playing';
     this.menuMode = false;
@@ -572,6 +651,11 @@ export class Game {
 
     if (this.captureMode) {
       this.levels.tick(dt);
+      return;
+    }
+
+    if (this.zombies) {
+      if (this.state === 'playing') this.zombies.update(dt);
       return;
     }
 
@@ -1014,6 +1098,10 @@ export class Game {
 
   private retryLevel(): void {
     this.audio.unlock();
+    if (this.zombies) {
+      this.startZombies(this.lastZombiesMode, false);
+      return;
+    }
     this.startLevel(this.levelIndex, this.levelStartScore);
     this.requestPointerLock();
   }
@@ -1021,6 +1109,12 @@ export class Game {
   private returnToMenu(): void {
     this.save.recordScore(this.score);
     this.cleanupActors();
+    if (this.zombies) {
+      this.zombies.checkpoint();
+      this.zombies.dispose();
+      this.zombies = null;
+    }
+    this.input.setShooterMode(false);
     this.input.setEnabled(false);
     this.ui.setPickupPrompt(false);
     this.ui.bossIntro(false);
@@ -1048,6 +1142,7 @@ export class Game {
     this.input.clearTransient();
     this.input.setEnabled(false);
     this.audio.setPaused(true);
+    this.zombies?.pause();
     this.ui.showPause();
     this.ui.setPickupPrompt(false);
     this.ui.setControlsActive(false);
@@ -1060,6 +1155,7 @@ export class Game {
     this.input.setEnabled(true);
     this.audio.unlock();
     this.audio.setPaused(false);
+    this.zombies?.resume();
     this.ui.hidePause();
     this.ui.setControlsActive(!this.bossIntroActive);
     this.input.clearTransient();
@@ -1104,6 +1200,7 @@ export class Game {
     if (this.state === 'menu') {
       this.input.consumeLook();
       this.cameraRig.update(dt);
+      this.levels.followSky(this.renderer.camera.position);
       this.updateActorsVisual(dt, 1, false);
       this.effects.update(dt);
       this.renderer.render();
@@ -1123,6 +1220,15 @@ export class Game {
     }
 
     const frozen = this.hitstop > 0 || this.state === 'paused';
+    if (this.zombies) {
+      this.zombies.followSky(this.renderer.camera.position);
+      this.zombies.updateVisual(dt, alpha, frozen);
+      this.effects.update(this.state === 'paused' ? 0 : dt);
+      this.renderer.render();
+      this.zombies.updateHud();
+      return;
+    }
+    this.levels.followSky(this.renderer.camera.position);
     this.updateActorsVisual(dt, alpha, frozen);
     this.effects.update(this.state === 'paused' ? 0 : dt);
     this.renderer.render();
@@ -1230,6 +1336,22 @@ export class Game {
   }
 
   debugSnapshot(): Record<string, unknown> {
+    if (this.zombies) {
+      return {
+        ...this.zombies.debugSnapshot(),
+        state: this.state,
+        touchDevice: this.input.touch.isTouchDevice,
+        hudVisible: document.getElementById('zombies-hud')?.classList.contains('is-active') ?? false,
+        fps: Math.round(this.loop.fps),
+        drawCalls: this.renderer.drawCalls,
+        triangles: this.renderer.triangles,
+        screen: this.ui.current,
+        paused: this.state === 'paused',
+        camYaw: Number(this.cameraRig.yaw.toFixed(3)),
+        camPitch: Number(this.cameraRig.pitch.toFixed(3)),
+        camDist: this.cameraRig.distance,
+      };
+    }
     const player = this.player;
     return {
       state: this.state,
@@ -1378,7 +1500,83 @@ export class Game {
     this.ui.setInstallAvailable(true, trigger);
   }
 
+  // ── Zombies test hooks ───────────────────────────────────────────────
+  debugStartZombies(mode: ZombiesRunMode = 'infinite'): void {
+    this.startZombies(mode, false);
+  }
+
+  debugStartZombiesRound(round: number): void {
+    this.zombies?.debugStartRound(round);
+  }
+
+  debugZombiesClear(): void {
+    this.zombies?.debugClearZombies();
+  }
+
+  debugZombiesCompleteRound(): void {
+    this.zombies?.debugCompleteRound();
+  }
+
+  debugZombiesPoints(amount: number): void {
+    this.zombies?.debugAddPoints(amount);
+  }
+
+  debugZombiesOpenDoors(): void {
+    this.zombies?.debugOpenAllDoors();
+  }
+
+  debugZombiesHurt(amount: number): void {
+    this.zombies?.debugHurt(amount);
+  }
+
+  debugZombiesTeleport(x: number, z: number): void {
+    this.zombies?.debugTeleport(x, z);
+  }
+
+  debugZombiesAim(x: number, z: number): void {
+    this.zombies?.debugAim(x, z);
+  }
+
+  debugZombiesBreakWindow(): string | null {
+    return this.zombies?.debugBreakWindow() ?? null;
+  }
+
+  debugZombiesSpawn(kind: string = 'walker'): void {
+    this.zombies?.debugSpawnZombie(kind as never);
+  }
+
+  /** Reports basic render state for a few named scene objects. */
+  debugSceneInfo(): Record<string, unknown> {
+    const info: Record<string, unknown> = {};
+    this.renderer.scene.traverse((object) => {
+      if (object.name === 'sky-dome') {
+        const material = (object as THREE.Mesh).material as THREE.ShaderMaterial;
+        info.sky = {
+          renderOrder: object.renderOrder,
+          depthWrite: material.depthWrite,
+          depthTest: material.depthTest,
+          transparent: material.transparent,
+          side: material.side,
+          visible: object.visible,
+        };
+      }
+      if (object.type === 'Points') {
+        info.stars = { count: (object as THREE.Points).geometry.getAttribute('position')?.count ?? 0, renderOrder: object.renderOrder, visible: object.visible };
+      }
+    });
+    return info;
+  }
+
+  /** Toggles named scene objects for visual diagnosis. */
+  debugSetVisible(name: string, visible: boolean): void {
+    this.renderer.scene.traverse((object) => {
+      if (object.name === name) object.visible = visible;
+    });
+  }
+
   dispose(): void {
+    this.zombies?.dispose();
+    this.zombies = null;
     this.loop.stop();
     this.input.detach();
     this.unsubscribers.forEach((unsubscribe) => unsubscribe());

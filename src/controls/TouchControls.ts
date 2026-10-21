@@ -1,4 +1,12 @@
-export type TouchAction = 'punch' | 'kick' | 'dodge' | 'special' | 'interact';
+export type TouchAction =
+  | 'punch'
+  | 'kick'
+  | 'dodge'
+  | 'special'
+  | 'interact'
+  | 'fire'
+  | 'reload'
+  | 'switchWeapon';
 
 export interface TouchCallbacks {
   onAction(action: TouchAction): void;
@@ -9,6 +17,7 @@ const REPEATABLE: Record<string, number> = {
   punch: 0.24,
   kick: 0.34,
   special: 1.1,
+  fire: 0.1,
 };
 
 /**

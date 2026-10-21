@@ -68,6 +68,51 @@ export function canvasTexture(
   return texture;
 }
 
+/** Soft moon disc with a few craters, drawn once into a sprite texture. */
+export function makeMoonTexture(): THREE.CanvasTexture {
+  return canvasTexture(256, 256, (ctx) => {
+    const glow = ctx.createRadialGradient(128, 128, 40, 128, 128, 128);
+    glow.addColorStop(0, 'rgba(255,248,220,1)');
+    glow.addColorStop(0.42, 'rgba(248,240,208,0.92)');
+    glow.addColorStop(0.55, 'rgba(220,226,246,0.28)');
+    glow.addColorStop(1, 'rgba(180,196,240,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 256, 256);
+    const rnd = seeded(91);
+    for (let i = 0; i < 16; i++) {
+      const a = rnd() * Math.PI * 2;
+      const r = rnd() * 54;
+      const x = 128 + Math.cos(a) * r;
+      const y = 128 + Math.sin(a) * r;
+      const radius = 3 + rnd() * 9;
+      ctx.fillStyle = `rgba(196,196,186,${(0.1 + rnd() * 0.18).toFixed(2)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Stratified cloud sheet: soft blobs with transparent gaps, tiled on a plane. */
+export function makeCloudTexture(seed = 7): THREE.CanvasTexture {
+  return canvasTexture(512, 512, (ctx) => {
+    ctx.clearRect(0, 0, 512, 512);
+    const rnd = seeded(seed);
+    for (let i = 0; i < 90; i++) {
+      const x = rnd() * 512;
+      const y = rnd() * 512;
+      const radius = 24 + rnd() * 78;
+      const gradient = ctx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
+      const alpha = 0.05 + rnd() * 0.11;
+      gradient.addColorStop(0, `rgba(206,214,236,${alpha.toFixed(3)})`);
+      gradient.addColorStop(0.55, `rgba(170,180,208,${(alpha * 0.6).toFixed(3)})`);
+      gradient.addColorStop(1, 'rgba(120,130,170,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    }
+  });
+}
+
 function speckle(ctx: CanvasRenderingContext2D, w: number, h: number, count: number, seed: number): void {
   const rnd = seeded(seed);
   for (let i = 0; i < count; i++) {
@@ -378,6 +423,8 @@ export class LevelBuilder {
   readonly boxGeo: THREE.BufferGeometry;
   private readonly sphereGeo: THREE.BufferGeometry;
   private glowTexture: THREE.CanvasTexture | null = null;
+  private skyRoot: THREE.Group | null = null;
+  private cloudGroup: THREE.Group | null = null;
   private time = 0;
   /** Callbacks driven once per frame by the game (water, boats, flickering neon). */
   readonly animations: Array<(time: number, dt: number) => void> = [];
@@ -580,11 +627,19 @@ export class LevelBuilder {
     this.materials.push(material);
     const stars = new THREE.Points(geometry, material);
     stars.frustumCulled = false;
-    this.group.add(stars);
+    stars.renderOrder = -40;
+    (this.skyRoot ?? this.group).add(stars);
   }
 
   addSky(top: string, horizon: string): void {
-    const geometry = new THREE.SphereGeometry(150, 24, 16);
+    const skyRoot = new THREE.Group();
+    skyRoot.name = 'night-sky';
+    this.skyRoot = skyRoot;
+    this.group.add(skyRoot);
+
+    // Must stay inside the camera's far plane (260): a larger dome gets clipped
+    // into a hard circular silhouette in the sky.
+    const geometry = new THREE.SphereGeometry(220, 28, 18);
     this.geometries.push(geometry);
     const material = new THREE.ShaderMaterial({
       uniforms: {
@@ -614,12 +669,85 @@ export class LevelBuilder {
       `,
       side: THREE.BackSide,
       depthWrite: false,
+      depthTest: false,
       fog: false,
     });
     this.materials.push(material);
     const sky = new THREE.Mesh(geometry, material);
+    sky.name = 'sky-dome';
     sky.frustumCulled = false;
-    this.group.add(sky);
+    // Draw first and never write/test depth: the dome must not cut the stars
+    // or the moon out of the sky with an opaque silhouette.
+    sky.renderOrder = -100;
+    skyRoot.add(sky);
+
+    // Moon sits in the same direction as the key directional light so the
+    // highlights on the city read as moonlight, not decoration.
+    const moonTexture = this.texture(makeMoonTexture());
+    const moonMaterial = new THREE.SpriteMaterial({
+      map: moonTexture,
+      transparent: true,
+      opacity: 0.95,
+      depthWrite: false,
+      depthTest: true,
+      fog: false,
+      toneMapped: false,
+    });
+    this.materials.push(moonMaterial);
+    const moon = new THREE.Sprite(moonMaterial);
+    moon.position.set(105, 148, 122);
+    moon.scale.set(52, 52, 1);
+    moon.renderOrder = -35;
+    skyRoot.add(moon);
+
+    // Three slow cloud sheets: cheap, layered, and they hide stars behind them
+    // because they are real transparent geometry inside the star sphere.
+    const cloudGroup = new THREE.Group();
+    cloudGroup.name = 'clouds';
+    skyRoot.add(cloudGroup);
+    this.cloudGroup = cloudGroup;      const sheets: Array<[number, number, string, number]> = [
+      [72, 300, '#b9c4de', 0.2],
+      [104, 340, '#cdd6ea', 0.14],
+      [136, 380, '#aab6d4', 0.09],
+    ];
+    for (let i = 0; i < sheets.length; i++) {
+      const sheet = sheets[i];
+      if (!sheet) continue;
+      const cloudTexture = this.texture(makeCloudTexture(11 + i * 17));
+      cloudTexture.repeat.set(2.2 + i * 0.4, 2.2 + i * 0.4);
+      const cloudMat = new THREE.MeshBasicMaterial({
+        map: cloudTexture,
+        transparent: true,
+        opacity: sheet[3],
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        fog: false,
+        toneMapped: false,
+      });
+      this.materials.push(cloudMat);
+      const cloudGeo = new THREE.PlaneGeometry(sheet[1], sheet[1]);
+      this.geometries.push(cloudGeo);
+      const plane = new THREE.Mesh(cloudGeo, cloudMat);
+      plane.rotation.x = -Math.PI / 2;
+      plane.rotation.z = i * 0.9;
+      plane.position.set(i % 2 === 0 ? 40 : -60, sheet[0], i % 2 === 0 ? -50 : 70);
+      plane.renderOrder = -30;
+      plane.userData.spin = 0.006 + i * 0.004;
+      cloudGroup.add(plane);
+    }
+    this.animations.push((_time, dt) => {
+      if (!this.cloudGroup) return;
+      for (const child of this.cloudGroup.children) {
+        const spin = typeof child.userData.spin === 'number' ? child.userData.spin : 0.005;
+        child.rotation.z += spin * dt;
+      }
+    });
+  }
+
+  /** Keeps the sky dome, stars and moon centred on the active camera. */
+  followCamera(position: THREE.Vector3): void {
+    if (!this.skyRoot) return;
+    this.skyRoot.position.set(position.x, 0, position.z);
   }
 
   addSkyline(radius = 62, count = 54, baseY = -2, heightRange: [number, number] = [12, 34]): void {

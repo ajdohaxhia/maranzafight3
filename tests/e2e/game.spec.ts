@@ -24,6 +24,13 @@ interface Snapshot {
   drawCalls: number;
   screen: string | null;
   levelCount: number;
+  mode?: string;
+  phase?: string;
+  round?: number;
+  points?: number;
+  kills?: number;
+  mag?: number;
+  zombiesAt?: Array<[number, number, string, string]>;
 }
 
 declare global {
@@ -38,6 +45,10 @@ declare global {
       jumpToLevel(level: number): void;
       hurtPlayer(amount?: number): void;
       showMenu(): void;
+      startZombies(mode?: 'infinite' | 'extraction'): void;
+      zombiesSpawn(kind?: string): void;
+      zombiesAim(x: number, z: number): void;
+      zombiesCompleteRound(): void;
     };
   }
 }
@@ -193,6 +204,46 @@ test.describe('MARANZA FIGHT 3', () => {
     await expect(page.locator('#boss-hud')).toHaveClass(/is-active/);
   });
 
+  test('modalità zombies: HUD, sparo, uccisione e fine round', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Mira e fuoco col mouse, la variante touch è coperta dal test mobile');
+    await boot(page);
+    await page.locator('#btn-zombies').click();
+    await expect(page.locator('#screen-zombies')).toHaveClass(/is-active/);
+    // The mode buttons must keep their label/sub markup (the sub is not glued
+    // onto the label, which is what a textContent rewrite used to cause).
+    await expect(page.locator('[data-zmode="extraction"] .btn__label')).toHaveText('ESTRAZIONE');
+    await expect(page.locator('[data-zmode="extraction"] .btn__sub')).toHaveText('20 round · obiettivo finale');
+    await page.locator('[data-zmode="infinite"]').click();
+    await expect.poll(async () => (await snapshot(page)).mode, { timeout: 30_000 }).toBe('zombies');
+    await expect(page.locator('#zombies-hud')).toHaveClass(/is-active/);
+    await page.waitForFunction(() => window.__MARANZA__.snapshot.phase === 'round', undefined, { timeout: 30_000 });
+
+    await page.evaluate(() => window.__MARANZA__.zombiesSpawn('walker'));
+    await page.waitForTimeout(300);
+    const target = await page.evaluate(() => {
+      const snap = window.__MARANZA__.snapshot;
+      const zombie = snap.zombiesAt?.[snap.zombiesAt.length - 1];
+      if (!zombie) return null;
+      window.__MARANZA__.zombiesAim(zombie[0], zombie[1]);
+      return zombie;
+    });
+    expect(target).not.toBeNull();
+    await page.waitForTimeout(200);
+    await page.evaluate(() => {
+      const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+      canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
+    });
+    await expect
+      .poll(async () => (await snapshot(page)).points ?? 0, { timeout: 10_000, intervals: [150] })
+      .toBeGreaterThan(0);
+
+    await page.evaluate(() => window.__MARANZA__.zombiesCompleteRound());
+    await expect.poll(async () => (await snapshot(page)).phase, { timeout: 10_000 }).toBe('intermission');
+    await expect(page.locator('#z-intermission')).toHaveClass(/is-active/);
+    expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
+  });
+
   test('la selezione livelli mostra nove piazze in tre capitoli', async ({ page }) => {
     await boot(page);
     await page.locator('#btn-levels').click();
@@ -299,5 +350,48 @@ test.describe('mobile touch', () => {
     await page.waitForTimeout(250);
     const yawAfter = (await snapshot(page)).cameraYaw;
     expect(Math.abs(yawAfter - yawBefore)).toBeGreaterThan(0.02);
+  });
+
+  test('zombies: HUD libero dallo stick e fuoco touch', async ({ page }) => {
+    await boot(page);
+    await page.locator('#btn-zombies').tap();
+    await expect(page.locator('#screen-zombies')).toHaveClass(/is-active/);
+    await page.locator('[data-zmode="infinite"]').tap();
+    await expect.poll(async () => (await snapshot(page)).mode, { timeout: 30_000 }).toBe('zombies');
+    await page.waitForFunction(() => window.__MARANZA__.snapshot.phase === 'round', undefined, { timeout: 30_000 });
+
+    const layout = await page.evaluate(() => {
+      const rect = (selector: string) => {
+        const element = document.querySelector(selector);
+        if (!element) return null;
+        const box = element.getBoundingClientRect();
+        return { x: box.x, y: box.y, w: box.width, h: box.height };
+      };
+      const overlap = (a: ReturnType<typeof rect>, b: ReturnType<typeof rect>) => {
+        if (!a || !b) return true;
+        return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+      };
+      const weapon = rect('.zhud__weapon');
+      const stick = rect('.stick');
+      const fire = rect('.tbtn--fire');
+      return {
+        weapon,
+        stick,
+        weaponHitsStick: overlap(weapon, stick),
+        weaponHitsFire: overlap(weapon, fire),
+        bodyTouch: document.body.classList.contains('is-touch'),
+      };
+    });
+    expect(layout.bodyTouch).toBe(true);
+    expect(layout.weapon).not.toBeNull();
+    expect(layout.weaponHitsStick).toBe(false);
+    expect(layout.weaponHitsFire).toBe(false);
+
+    const before = (await snapshot(page)).mag ?? 0;
+    await page.locator('.tbtn--fire').tap();
+    await expect
+      .poll(async () => (await snapshot(page)).mag ?? before, { timeout: 10_000, intervals: [150] })
+      .toBeLessThan(before);
+    expect((page as Page & { __errors?: string[] }).__errors ?? []).toEqual([]);
   });
 });

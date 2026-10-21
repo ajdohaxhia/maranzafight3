@@ -2,7 +2,18 @@ import { GamepadInput } from './GamepadInput';
 import { KeyboardInput, type ActionKey } from './KeyboardInput';
 import { TouchControls, type TouchAction } from './TouchControls';
 
-export type InputAction = 'punch' | 'kick' | 'dodge' | 'special' | 'interact' | 'pause';
+export type InputAction =
+  | 'punch'
+  | 'kick'
+  | 'dodge'
+  | 'special'
+  | 'interact'
+  | 'pause'
+  | 'fire'
+  | 'reload'
+  | 'switchWeapon'
+  | 'slot1'
+  | 'slot2';
 
 export interface InputCallbacks {
   onPauseRequested(): void;
@@ -15,6 +26,9 @@ const GAMEPAD_ACTIONS: Record<number, InputAction> = {
   1: 'dodge',
   3: 'special',
   4: 'interact',
+  5: 'reload',
+  7: 'fire',
+  6: 'switchWeapon',
   9: 'pause',
 };
 
@@ -27,6 +41,8 @@ export class InputManager {
   run = false;
   enabled = false;
   pointerLocked = false;
+  shooterMode = false;
+  private mouseFire = false;
 
   private readonly buffer = new Map<InputAction, number>();
   private readonly callbacks: InputCallbacks;
@@ -116,6 +132,7 @@ export class InputManager {
       this.moveX = 0;
       this.moveY = 0;
       this.run = false;
+      this.mouseFire = false;
       this.touch.reset();
       this.exitPointerLock();
     }
@@ -123,6 +140,13 @@ export class InputManager {
 
   setDeadzone(percent: number): void {
     this.touch.setDeadzone(percent);
+  }
+
+  /** Shooting layout: left click fires, right click swaps slot, R reloads. */
+  setShooterMode(enabled: boolean): void {
+    this.shooterMode = enabled;
+    this.mouseFire = false;
+    this.buffer.clear();
   }
 
   update(dt: number): void {
@@ -187,7 +211,8 @@ export class InputManager {
       (action === 'special' && this.keyboard.keys.has('KeyQ')) ||
       (action === 'interact' && this.keyboard.keys.has('KeyE')) ||
       (action === 'punch' && this.keyboard.keys.has('KeyJ')) ||
-      (action === 'kick' && this.keyboard.keys.has('KeyK'));
+      (action === 'kick' && this.keyboard.keys.has('KeyK')) ||
+      (action === 'fire' && (this.mouseFire || this.keyboard.keys.has('KeyF')));
     const padIndex = Object.entries(GAMEPAD_ACTIONS).find(([, value]) => value === action)?.[0];
     const gamepadDown = padIndex !== undefined && this.gamepad.isDown(Number(padIndex));
     return touchDown || keyboardDown || gamepadDown;
@@ -253,9 +278,22 @@ export class InputManager {
     this.callbacks.onAnyGesture();
     event.preventDefault();
     if (this.pointerLocked) {
+      if (this.shooterMode) {
+        if (event.button === 0) {
+          this.mouseFire = true;
+          this.trigger('fire');
+        } else {
+          this.trigger('switchWeapon');
+        }
+        return;
+      }
       if (event.button === 0) this.trigger('punch');
       else this.trigger('kick');
       return;
+    }
+    if (this.shooterMode && event.button === 0) {
+      this.mouseFire = true;
+      this.trigger('fire');
     }
     this.dragging = true;
     this.dragButton = event.button;
@@ -280,10 +318,14 @@ export class InputManager {
   }
 
   private handleMouseUp(event: MouseEvent): void {
+    if (event.button === 0) this.mouseFire = false;
     if (event.button !== this.dragButton) return;
     if (!this.dragging) return;
     this.dragging = false;
     if (this.dragMoved < 8) {
+      if (this.shooterMode) {
+        return;
+      }
       if (this.dragButton === 0) this.trigger('punch');
       else this.trigger('kick');
     }
