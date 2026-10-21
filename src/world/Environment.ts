@@ -83,24 +83,45 @@ function speckle(ctx: CanvasRenderingContext2D, w: number, h: number, count: num
 
 export function makePlazaTexture(): THREE.CanvasTexture {
   return canvasTexture(512, 512, (ctx) => {
-    ctx.fillStyle = '#3b3c42';
+    // Piastrelle realistiche: fondo calcestruzzo scuro continuo con speckles,
+    // lastre di misura realistica, giunti profondi disegnati (non puntini).
+    ctx.fillStyle = '#232428';
     ctx.fillRect(0, 0, 512, 512);
     const rnd = seeded(17);
-    const slab = 128;
+    const slab = 170;
     for (let y = 0; y < 512; y += slab) {
       for (let x = 0; x < 512; x += slab) {
-        const shade = 58 + Math.floor(rnd() * 18);
-        ctx.fillStyle = `rgb(${shade},${shade + 1},${shade + 5})`;
-        ctx.fillRect(x + 2, y + 2, slab - 4, slab - 4);
-        ctx.strokeStyle = 'rgba(12,12,14,0.55)';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x + 1, y + 1, slab - 2, slab - 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.02)';
-        ctx.fillRect(x + 6, y + 6, slab - 12, 3);
+        const shade = 40 + Math.floor(rnd() * 12);
+        ctx.fillStyle = `rgb(${shade},${shade + 2},${shade + 7})`;
+        ctx.fillRect(x + 3, y + 3, slab - 6, slab - 6);
+        // Giunto profondo: scia di fuga leggibile, lucentezza solo locale.
+        ctx.strokeStyle = 'rgba(10,10,12,0.9)';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(x + 1.5, y + 1.5, slab - 3, slab - 3);
+        // Usura asimmetrica (scia del traffico) invece di highlight uniforme.
+        ctx.fillStyle = 'rgba(255,255,255,0.035)';
+        ctx.fillRect(x + 10, y + slab - 14, slab - 44, 5);
+        // Piccola crepa procedurale per lastra.
+        if (rnd() > 0.5) {
+          ctx.strokeStyle = 'rgba(8,8,10,0.5)';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          const sx = x + 30 + rnd() * (slab - 90);
+          const sy = y + 30 + rnd() * (slab - 90);
+          ctx.moveTo(sx, sy);
+          let cx = sx;
+          let cy = sy;
+          for (let step = 0; step < 5; step++) {
+            cx += 6 + rnd() * 14;
+            cy += (rnd() - 0.5) * 22;
+            ctx.lineTo(cx, cy);
+          }
+          ctx.stroke();
+        }
       }
     }
-    speckle(ctx, 512, 512, 1600, 91);
-  }, 4, 4);
+    speckle(ctx, 512, 512, 2200, 91);
+  }, 3, 3);
 }
 
 export function makeMetroTexture(): THREE.CanvasTexture {

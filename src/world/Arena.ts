@@ -84,12 +84,15 @@ export function buildStation(physics: Physics, quality: Quality): ArenaBuild {
   builder.ground(46, 38, makePlazaTexture());
 
   builder.addLights({
-    hemiSky: '#8e9cc4',
-    hemiGround: '#241f1a',
-    hemiIntensity: 1.0,
-    moonColor: '#cfd9ff',
-    moonIntensity: 2.5,
-    moonPosition: [14, 28, 10],
+    hemiSky: '#5f6c93',
+    hemiGround: '#2a2018',
+    hemiIntensity: 1.15,
+    moonColor: '#b9c6f2',
+    moonIntensity: 2.8,
+    moonPosition: [14, 26, 12],
+    rimColor: '#ff9a5c',
+    rimIntensity: 0.6,
+    rimPosition: [-16, 9, -20],
     shadows: true,
   });
 
@@ -102,8 +105,11 @@ export function buildStation(physics: Physics, quality: Quality): ArenaBuild {
   builder.box({ pos: [0, 2.1, -20.5], size: [46, 4.2, 1.4], material: stoneDark, collider: true });
   builder.box({ pos: [0, 4.6, -20.2], size: [48, 0.8, 1.2], material: stoneLight });
   for (const x of [-18, -9, 0, 9, 18]) {
-    builder.box({ pos: [x, 8, -20.8], size: [1.3, 12, 0.9], material: stoneLight });
-    archWindow(builder, x, -20.4, 5.6, x === 0 ? 4.2 : 3.4, 5.4, x === 0);
+    // Nichia: spessore della facciata percepibile, non un collage piatto.
+    builder.box({ pos: [x, 8, -20.9], size: [1.5, 12.4, 1.0], material: stoneLight });
+    builder.box({ pos: [x, 8, -21.4], size: [1.5, 12.4, 1.0], color: '#1c1915' });
+    builder.box({ pos: [x, 8, -20.9], size: [0.55, 12.4, 0.65], material: stoneLight });
+    archWindow(builder, x, -20.9, 5.6, x === 0 ? 4.2 : 3.4, 5.4, x === 0);
   }
   // Central portal.
   builder.box({ pos: [0, 2.3, -20.3], size: [5.6, 4.6, 0.8], color: '#171411' });
@@ -228,12 +234,12 @@ export function buildMetro(physics: Physics, quality: Quality): ArenaBuild {
   builder.ground(24, 40, makeMetroTexture());
 
   builder.addLights({
-    hemiSky: '#5b7b8a',
-    hemiGround: '#141a1a',
-    hemiIntensity: 0.7,
-    moonColor: '#b9e1f0',
-    moonIntensity: 0.8,
-    moonPosition: [6, 18, 4],
+    hemiSky: '#6c8ea0',
+    hemiGround: '#1c2624',
+    hemiIntensity: 0.95,
+    moonColor: '#cfeaf5',
+    moonIntensity: 1.1,
+    moonPosition: [5, 14, 3],
     shadows: true,
   });
 
@@ -382,12 +388,15 @@ export function buildDuomo(physics: Physics, quality: Quality): ArenaBuild {
   builder.ground(48, 42, makeDuomoTexture());
 
   builder.addLights({
-    hemiSky: '#8b90c0',
-    hemiGround: '#1c1814',
-    hemiIntensity: 0.95,
-    moonColor: '#d8dcff',
-    moonIntensity: 2.5,
-    moonPosition: [-10, 30, 6],
+    hemiSky: '#8a8fc8',
+    hemiGround: '#231e18',
+    hemiIntensity: 1.1,
+    moonColor: '#ecdcff',
+    moonIntensity: 2.8,
+    moonPosition: [-12, 28, 8],
+    rimColor: '#ffd9a0',
+    rimIntensity: 0.5,
+    rimPosition: [14, 10, -16],
     shadows: true,
   });
 

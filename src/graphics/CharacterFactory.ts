@@ -422,30 +422,31 @@ export class CharacterFactory {
     }
 
     // ── Head ────────────────────────────────────────────────────────────
+    // Cranio + occipite + mandibola su un collo raccordato al torso:
+    // niente più testa-"coppolone"; pivots e giunti restano invariati.
     this.add(head, this.sphereGeo(), skinMat, { scale: [0.126, 0.145, 0.128], pos: [0, 0.1, 0] });
-    this.add(head, this.cylinderGeo(), skinMat, { scale: [0.06, 0.07, 0.06], pos: [0, -0.05, 0] });
-    // Ears.
-    this.add(head, this.sphereGeo(), skinMat, { scale: [0.028, 0.042, 0.022], pos: [0.125, 0.09, 0] });
-    this.add(head, this.sphereGeo(), skinMat, { scale: [0.028, 0.042, 0.022], pos: [-0.125, 0.09, 0] });
-    // Nose.
-    this.add(head, this.coneGeo(), skinMat, {
-      scale: [0.024, 0.045, 0.024],
-      pos: [0, 0.085, 0.13],
-      rot: [Math.PI / 2, 0, 0],
-    });
-    // Mouth.
+    this.add(head, this.sphereGeo(), skinMat, { scale: [0.11, 0.09, 0.13], pos: [0, 0.065, -0.055] });
+    this.add(head, this.sphereGeo(), skinMat, { scale: [0.098, 0.06, 0.09], pos: [0, 0.02, 0.035] });
+    this.add(head, this.cylinderGeo(), skinMat, { scale: [0.058, 0.1, 0.058], pos: [0, -0.045, 0] });
+    this.add(head, this.taperedGeo(0.08, 0.06), skinMat, { scale: [1, 0.08, 0.75], pos: [0, -0.072, 0] });
+    // Orecchio.
+    this.add(head, this.sphereGeo(), skinMat, { scale: [0.026, 0.038, 0.024], pos: [0.126, 0.09, -0.005] });
+    this.add(head, this.sphereGeo(), skinMat, { scale: [0.026, 0.038, 0.024], pos: [-0.126, 0.09, -0.005] });
+    // Naso: ponte + punta, non un cono isolato.
+    this.add(head, this.boxGeo(), skinMat, { scale: [0.03, 0.045, 0.11], pos: [0, 0.075, 0.08] });
+    this.add(head, this.sphereGeo(), skinMat, { scale: [0.026, 0.02, 0.024], pos: [0, 0.082, 0.118] });
+    // Bocca.
     this.add(head, this.boxGeo(), this.mat(materials, '#5b3029', { roughness: 0.8 }), {
       scale: [0.05, 0.012, 0.012],
       pos: [0, 0.038, 0.124],
     });
-    // Eyebrows.
-    this.add(head, this.boxGeo(), hairMat, { scale: [0.042, 0.012, 0.012], pos: [0.052, 0.145, 0.117], rot: [0, 0, -0.14] });
-    this.add(head, this.boxGeo(), hairMat, { scale: [0.042, 0.012, 0.012], pos: [-0.052, 0.145, 0.117], rot: [0, 0, 0.14] });
-
-    // Eyes / sunglasses.
+    // Sopracciglia con volume e inclinazione.
+    this.add(head, this.boxGeo(), hairMat, { scale: [0.05, 0.014, 0.015], pos: [0.05, 0.142, 0.113], rot: [0, 0, -0.16] });
+    this.add(head, this.boxGeo(), hairMat, { scale: [0.05, 0.014, 0.015], pos: [-0.05, 0.142, 0.113], rot: [0, 0, 0.16] });
+    // Occhi leggermente incassati nella socket.
     if (look === 'player') {
-      this.eye(head, 0.052, 0.112, 0.112, whiteMat, darkMat);
-      this.eye(head, -0.052, 0.112, 0.112, whiteMat, darkMat);
+      this.eye(head, 0.052, 0.112, 0.108, whiteMat, darkMat);
+      this.eye(head, -0.052, 0.112, 0.108, whiteMat, darkMat);
     } else {
       this.add(head, this.boxGeo(), lensMat, { scale: [0.062, 0.036, 0.02], pos: [0.052, 0.112, 0.118], rot: [0, -0.1, 0] });
       this.add(head, this.boxGeo(), lensMat, { scale: [0.062, 0.036, 0.02], pos: [-0.052, 0.112, 0.118], rot: [0, 0.1, 0] });
@@ -526,18 +527,19 @@ export class CharacterFactory {
     const armThickness = look === 'puffer' || look === 'boss' ? 1.35 : look === 'turbo' ? 0.85 : 1;
     const upperLen = 0.26;
     const foreLen = 0.24;
-    const sleeveMat = look === 'puffer' || look === 'boss' ? primaryMat : primaryMat;
+    const sleeveMat = primaryMat;
+    // Spalla modellata: massetta deltidea che rammette al torso, non braccio separato.
+    this.add(armL, this.sphereGeo(), sleeveMat, { scale: [0.115 * armThickness, 0.1, 0.1], pos: [0.018, -0.02, 0] });
+    this.add(armR, this.sphereGeo(), sleeveMat, { scale: [0.115 * armThickness, 0.1, 0.1], pos: [-0.018, -0.02, 0] });
     this.add(armL, this.capsuleGeo(0.085 * armThickness, upperLen), sleeveMat, { pos: [0, -upperLen / 2, 0] });
     this.add(elbowL, this.sphereGeo(), sleeveMat, { scale: [0.09 * armThickness, 0.09 * armThickness, 0.09 * armThickness], pos: [0, 0, 0] });
     this.add(elbowL, this.capsuleGeo(0.072 * armThickness, foreLen), skinMat, { pos: [0, -foreLen / 2, 0] });
-    this.add(elbowL, this.sphereGeo(), skinMat, { scale: [0.062, 0.082, 0.052], pos: [0, -foreLen - 0.035, 0] });
-    this.add(elbowL, this.sphereGeo(), darkMat, { scale: [0.058, 0.018, 0.045], pos: [0, -foreLen - 0.06, 0] });
+    this.hand(elbowL, skinMat, -1, foreLen);
 
     this.add(armR, this.capsuleGeo(0.085 * armThickness, upperLen), sleeveMat, { pos: [0, -upperLen / 2, 0] });
     this.add(elbowR, this.sphereGeo(), sleeveMat, { scale: [0.09 * armThickness, 0.09 * armThickness, 0.09 * armThickness], pos: [0, 0, 0] });
     this.add(elbowR, this.capsuleGeo(0.072 * armThickness, foreLen), skinMat, { pos: [0, -foreLen / 2, 0] });
-    this.add(elbowR, this.sphereGeo(), skinMat, { scale: [0.062, 0.082, 0.052], pos: [0, -foreLen - 0.035, 0] });
-    this.add(elbowR, this.sphereGeo(), darkMat, { scale: [0.058, 0.018, 0.045], pos: [0, -foreLen - 0.06, 0] });
+    this.hand(elbowR, skinMat, 1, foreLen);
 
     if (look === 'boss') {
       // Rings.
@@ -563,9 +565,9 @@ export class CharacterFactory {
     const kneeR = this.group(legR, [0, -0.41, 0]);
 
     const legThickness = look === 'puffer' || look === 'boss' ? 1.3 : look === 'turbo' ? 0.86 : 1;
-    for (const [leg, knee, side] of [
-      [legL, kneeL, -1],
-      [legR, kneeR, 1],
+    for (const [leg, knee] of [
+      [legL, kneeL],
+      [legR, kneeR],
     ] as const) {
       this.add(leg, this.capsuleGeo(0.105 * legThickness, 0.24), pantsMat, { pos: [0, -0.19, 0] });
       this.add(knee, this.sphereGeo(), pantsMat, { scale: [0.105 * legThickness, 0.105 * legThickness, 0.105 * legThickness], pos: [0, 0, 0] });
@@ -574,19 +576,7 @@ export class CharacterFactory {
         // High socks.
         this.add(knee, this.cylinderGeo(), whiteMat, { scale: [0.086, 0.09, 0.086], pos: [0, -0.3, 0] });
       }
-      this.add(knee, this.boxGeo(), shoeMat, {
-        scale: [0.17, 0.095, 0.3],
-        pos: [0, -0.36, 0.06],
-      });
-      this.add(knee, this.sphereGeo(), shoeMat, { scale: [0.085, 0.055, 0.08], pos: [0, -0.355, 0.2] });
-      this.add(knee, this.boxGeo(), soleMat, {
-        scale: [0.178, 0.035, 0.31],
-        pos: [0, -0.405, 0.06],
-      });
-      this.add(knee, this.boxGeo(), accentMat, {
-        scale: [0.03, 0.06, 0.12],
-        pos: [side * 0.07, -0.33, 0.04],
-      });
+      this.shoe(knee, shoeMat, soleMat, accentMat);
     }
 
     for (const [leg, side] of [
@@ -633,6 +623,60 @@ export class CharacterFactory {
       radius,
       scale,
     };
+  }
+
+  /** Palmo + pollice corto: a distanza di gioco si legge "mano", non blob. */
+  private hand(
+    elbow: THREE.Object3D,
+    skin: THREE.Material,
+    side: 1 | -1,
+    foreLen: number,
+  ): void {
+    const y = -foreLen - 0.045;
+    this.add(elbow, this.sphereGeo(), skin, { scale: [0.068, 0.09, 0.055], pos: [0, y, 0.012] });
+    this.add(elbow, this.sphereGeo(), skin, {
+      scale: [0.028, 0.055, 0.042],
+      pos: [side * 0.052, y - 0.012, 0.028],
+      rot: [0.35, 0, side * -0.45],
+    });
+  }
+
+  /** Sneaker: tomaia + punta + suola in contrasto, leggibile come scarpa. */
+  private shoe(
+    knee: THREE.Object3D,
+    shoe: THREE.Material,
+    sole: THREE.Material,
+    accent: THREE.Material,
+  ): void {
+    // Tomaia principale.
+    this.add(knee, this.boxGeo(), shoe, {
+      scale: [0.16, 0.09, 0.26],
+      pos: [0, -0.355, 0.045],
+    });
+    // Raccordo caviglia.
+    this.add(knee, this.sphereGeo(), shoe, {
+      scale: [0.082, 0.065, 0.08],
+      pos: [0, -0.35, 0],
+    });
+    // Punta / cap toe.
+    this.add(knee, this.sphereGeo(), shoe, {
+      scale: [0.082, 0.055, 0.075],
+      pos: [0, -0.352, 0.2],
+    });
+    // Suola in contrasto, leggermente più larga e lunga della tomaia.
+    this.add(knee, this.boxGeo(), sole, {
+      scale: [0.176, 0.032, 0.315],
+      pos: [0, -0.405, 0.055],
+    });
+    // Fascia lingua/vernice sulle laterali.
+    this.add(knee, this.boxGeo(), accent, {
+      scale: [0.026, 0.05, 0.11],
+      pos: [0.085, -0.335, 0.05],
+    });
+    this.add(knee, this.boxGeo(), accent, {
+      scale: [0.026, 0.05, 0.11],
+      pos: [-0.085, -0.335, 0.05],
+    });
   }
 
   private eye(

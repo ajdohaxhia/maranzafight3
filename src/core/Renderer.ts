@@ -13,7 +13,7 @@ export interface QualityProfile {
 
 export const QUALITY_PROFILES: Record<Quality, QualityProfile> = {
   low: {
-    label: 'BASSA',
+    label: 'MOBILE',
     pixelRatioCap: 1.1,
     renderScale: 0.7,
     shadows: false,
@@ -22,7 +22,7 @@ export const QUALITY_PROFILES: Record<Quality, QualityProfile> = {
     fov: 64,
   },
   medium: {
-    label: 'MEDIA',
+    label: 'BILANCIATO',
     pixelRatioCap: 1.5,
     renderScale: 0.88,
     shadows: false,
@@ -31,7 +31,7 @@ export const QUALITY_PROFILES: Record<Quality, QualityProfile> = {
     fov: 62,
   },
   high: {
-    label: 'ALTA',
+    label: 'ALTO',
     pixelRatioCap: 2,
     renderScale: 1,
     shadows: true,
